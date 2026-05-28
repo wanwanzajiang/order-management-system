@@ -27,14 +27,14 @@ CREATE TABLE IF NOT EXISTS orders (
     brand TEXT,                    -- 品牌
     product_model TEXT NOT NULL,
     quantity INTEGER NOT NULL CHECK (quantity > 0),
-    delivery_date TEXT,            -- 合同货期/交期
+    delivery_date TEXT,            -- 合同货期/交期（自由文本，如"7天内"、"月底前"）
     order_status TEXT NOT NULL DEFAULT '调货中' CHECK (order_status IN ('调货中', '路途中', '已到货', '已完结')),
     shipping_date DATE,           -- 仓库发货时间（由仓库填写）
     tracking_no TEXT,             -- 快递单号（由仓库填写）
     warehouse_notes TEXT,
     sales_notes TEXT,
     salesperson_name TEXT,         -- 业务员姓名（关联salespeople.name）
-    sales_id UUID REFERENCES auth.users(id),  -- 保留兼容
+    sales_id UUID,                 -- 保留兼容字段（允许为空）
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -49,7 +49,8 @@ CREATE INDEX IF NOT EXISTS idx_salespeople_name ON salespeople(name);
 
 -- ============================================
 -- RLS (Row Level Security) 策略
--- ⚠️ 注意：策略中不能引用自身表，否则会导致 infinite recursion！
+-- 设计原则：简洁明了，避免自引用导致无限递归
+-- 所有已登录用户可读写所有数据（内部管理系统）
 -- ============================================
 
 -- 启用 RLS
@@ -58,16 +59,19 @@ ALTER TABLE orders ENABLE ROW LEVEL SECURITY;
 ALTER TABLE salespeople ENABLE ROW LEVEL SECURITY;
 
 -- -------------------------------------------
--- user_profiles 表的 RLS 策略（安全版）
+-- user_profiles 表的 RLS 策略
 -- -------------------------------------------
+-- 所有登录用户可读取用户信息
 CREATE POLICY "authenticated_can_read_profiles"
     ON user_profiles FOR SELECT
     USING (auth.role() = 'authenticated');
 
+-- 用户只能插入自己的 profile
 CREATE POLICY "users_can_insert_own_profile"
     ON user_profiles FOR INSERT
     WITH CHECK (auth.uid() = id);
 
+-- 用户只能更新自己的 profile
 CREATE POLICY "users_can_update_own_profile"
     ON user_profiles FOR UPDATE
     USING (auth.uid() = id)
@@ -76,36 +80,39 @@ CREATE POLICY "users_can_update_own_profile"
 -- -------------------------------------------
 -- salespeople 表的 RLS 策略
 -- -------------------------------------------
+-- 所有登录用户可读取业务员列表
 CREATE POLICY "authenticated_can_read_salespeople"
     ON salespeople FOR SELECT
     USING (auth.role() = 'authenticated');
 
+-- 所有登录用户可管理业务员（增删改）
 CREATE POLICY "authenticated_can_manage_salespeople"
     ON salespeople FOR ALL
     USING (auth.role() = 'authenticated')
     WITH CHECK (auth.role() = 'authenticated');
 
 -- -------------------------------------------
--- orders 表的 RLS 策略
+-- orders 表的 RLS 简化策略
+-- 所有已登录用户可完整 CRUD 操作
 -- -------------------------------------------
 
--- 管理员：可读所有订单
-CREATE POLICY "admins_can_read_all_orders"
+-- 读取订单
+CREATE POLICY "authenticated_can_read_orders"
     ON orders FOR SELECT
-    USING (auth.role() = 'authenticated');  -- 简化：所有登录用户可读
+    USING (auth.role() = 'authenticated');
 
--- 仓库人员/管理员：可插入订单
+-- 新增订单
 CREATE POLICY "authenticated_can_insert_orders"
     ON orders FOR INSERT
     WITH CHECK (auth.role() = 'authenticated');
 
--- 所有登录用户：可更新订单
+-- 更新订单
 CREATE POLICY "authenticated_can_update_orders"
     ON orders FOR UPDATE
     USING (auth.role() = 'authenticated')
     WITH CHECK (auth.role() = 'authenticated');
 
--- 所有登录用户：可删除订单
+-- 删除订单
 CREATE POLICY "authenticated_can_delete_orders"
     ON orders FOR DELETE
     USING (auth.role() = 'authenticated');

@@ -95,7 +95,8 @@ const API = {
         delivery_date: orderData.delivery_date || null,
         order_status: '调货中',
         salesperson_name: orderData.salesperson_name,
-        sales_notes: orderData.sales_notes || ''
+        sales_notes: orderData.sales_notes || '',
+        sales_id: null  // 新架构用 salesperson_name，此字段保留兼容
       })
       .select()
       .single();

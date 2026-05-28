@@ -476,6 +476,14 @@ tr:hover {
   font-size: 12px;
 }
 
+/* ===== 状态下拉选择框 ===== */
+.status-select {
+  cursor: pointer;
+  font-size: 12px;
+  padding: 4px 8px !important;
+  border-radius: 4px !important;
+}
+
 /* ===== Toast通知 ===== */
 #toastBox {
   position: fixed;

@@ -79,7 +79,7 @@
             </div>
             <div class="form-group">
               <label for="deliveryDate">合同货期 / 交期</label>
-              <input type="date" id="deliveryDate" class="form-control" placeholder="约定交货日期">
+              <input type="text" id="deliveryDate" class="form-control" placeholder="如：7天内、月底前、2026-06-15">
             </div>
             <div class="form-group">
               <label for="salespersonName">所属业务员 *</label>
@@ -344,12 +344,24 @@
       const brand = document.getElementById('brand').value.trim();
       const productModel = document.getElementById('productModel').value.trim();
       const quantity = parseInt(document.getElementById('quantity').value);
-      const deliveryDate = document.getElementById('deliveryDate').value;
+      const deliveryDate = document.getElementById('deliveryDate').value.trim();
       const salespersonName = document.getElementById('salespersonName').value;
       const salesNotes = document.getElementById('salesNotes').value.trim();
 
       if (!invoiceNo || !productModel || !quantity || !salespersonName) {
         showToast('请填写所有必填字段（带*号）', 'error');
+        return;
+      }
+
+      if (quantity <= 0) {
+        showToast('数量必须大于0', 'error');
+        return;
+      }
+
+      // 发票号重复检测
+      const existing = await API.getOrderByInvoice(invoiceNo);
+      if (existing.data) {
+        showToast('该发票号已存在，请检查后重新输入', 'error');
         return;
       }
 
