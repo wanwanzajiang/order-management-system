@@ -90,13 +90,14 @@ const API = {
         invoice_no: orderData.invoice_no,
         product_model: orderData.product_model,
         brand: orderData.brand || null,
-        quantity: orderData.quantity,
-        order_date: orderData.order_date || new Date().toISOString().split('T')[0],
+        quantity: orderData.quantity || 1,
+        order_date: orderData.order_date || null,
         delivery_date: orderData.delivery_date || null,
-        order_status: '调货中',
+        // 状态默认为空，由仓库填写
+        order_status: orderData.order_status || null,
         salesperson_name: orderData.salesperson_name,
         sales_notes: orderData.sales_notes || '',
-        sales_id: null  // 新架构用 salesperson_name，此字段保留兼容
+        sales_id: null
       })
       .select()
       .single();

@@ -180,6 +180,7 @@
             </td>
             <td>
               <select class="form-control status-select" onchange="updateStatus(${order.id}, this.value)" style="width:110px;">
+                <option value="">- 待填写 -</option>
                 ${CONFIG.ORDER_STATUSES.map(s =>
                   `<option value="${s}" ${s === order.order_status ? 'selected' : ''}>${s}</option>`
                 ).join('')}

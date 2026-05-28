@@ -68,14 +68,15 @@
               <input type="text" id="brand" class="form-control" placeholder="如：Apple、Samsung">
             </div>
             <div class="form-group">
-              <label for="productModel">产品型号 *</label>
-              <input type="text" id="productModel" class="form-control" placeholder="如：iPhone 16 Pro" required>
+              <label for="productModel">产品型号 & 数量 *</label>
+              <textarea id="productModel" class="form-control" rows="3" placeholder="可自由填写，支持一批多个型号&#10;&#10;示例：&#10;iPhone 16 Pro × 5台&#10;iPhone 16 × 10台&#10;AirPods × 3副&#10;&#10;也可以只写单个型号：iPhone 16 Pro" required style="resize:vertical;"></textarea>
+              <small class="form-hint" style="color:#aaa;font-size:11px;">一批货有多个型号可以一起写在这里，数量也一并注明</small>
             </div>
           </div>
           <div class="form-row">
             <div class="form-group">
-              <label for="quantity">数量 *</label>
-              <input type="number" id="quantity" class="form-control" placeholder="请输入数量" min="1" required>
+              <label for="quantity">总数量（选填，方便统计）</label>
+              <input type="number" id="quantity" class="form-control" placeholder="不填则默认为1" min="0">
             </div>
             <div class="form-group">
               <label for="deliveryDate">合同货期 / 交期</label>
@@ -103,6 +104,8 @@
         <div class="filter-bar">
           <select id="filterStatus" class="form-control" onchange="loadOrders()" style="width:auto;min-width:140px;">
             <option value="">全部状态</option>
+            <option value="__empty__">- 待填写 -</option>
+            <option value="调货中">调货中</option>
             <option value="调货中">调货中</option>
             <option value="路途中">路途中</option>
             <option value="已到货">已到货</option>
@@ -258,10 +261,28 @@
       const filters = {};
       const statusFilter = document.getElementById('filterStatus').value;
       const spFilter = document.getElementById('filterSalesperson').value;
-      if (statusFilter) filters.order_status = statusFilter;
+      if (statusFilter === '__empty__') {
+        // 筛选状态为空的订单
+        filters._status_empty = true;
+      } else if (statusFilter) {
+        filters.order_status = statusFilter;
+      }
       if (spFilter) filters.salesperson_name = spFilter;
 
-      const { data, error } = await API.getOrders(filters);
+      // 使用原始查询以支持空状态筛选
+      let query = SUPABASE
+        .from('orders')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (statusFilter === '__empty__') {
+        query = query.is('order_status', null);
+      } else if (statusFilter) {
+        query = query.eq('order_status', statusFilter);
+      }
+      if (spFilter) query = query.eq('salesperson_name', spFilter);
+
+      const { data, error } = await query;
 
       if (error) {
         App.showError(container, '加载订单失败: ' + error.message);
@@ -307,6 +328,7 @@
           <td>${order.delivery_date || '-'}</td>
           <td>
             <select class="form-control status-select" onchange="updateStatus(${order.id}, this.value)" style="width:110px;">
+              <option value="">- 待填写 -</option>
               ${CONFIG.ORDER_STATUSES.map(s =>
                 `<option value="${s}" ${s === order.order_status ? 'selected' : ''}>${s}</option>`
               ).join('')}
@@ -336,25 +358,28 @@
       container.innerHTML = html;
     }
 
-    // 新增订单（增强版）
+    // 新增订单（增强版 - 支持自由文本型号+数量）
     document.getElementById('addOrderForm').addEventListener('submit', async (e) => {
       e.preventDefault();
       const invoiceNo = document.getElementById('invoiceNo').value.trim();
       const orderDate = document.getElementById('orderDate').value;
       const brand = document.getElementById('brand').value.trim();
       const productModel = document.getElementById('productModel').value.trim();
-      const quantity = parseInt(document.getElementById('quantity').value);
+      const quantityVal = document.getElementById('quantity').value;
       const deliveryDate = document.getElementById('deliveryDate').value.trim();
       const salespersonName = document.getElementById('salespersonName').value;
       const salesNotes = document.getElementById('salesNotes').value.trim();
 
-      if (!invoiceNo || !productModel || !quantity || !salespersonName) {
+      if (!invoiceNo || !productModel || !salespersonName) {
         showToast('请填写所有必填字段（带*号）', 'error');
         return;
       }
 
-      if (quantity <= 0) {
-        showToast('数量必须大于0', 'error');
+      // 数量选填，不填默认1
+      const quantity = quantityVal ? parseInt(quantityVal) : 1;
+
+      if (quantity < 0) {
+        showToast('数量不能为负数', 'error');
         return;
       }
 
@@ -370,11 +395,11 @@
 
       const { error } = await API.createOrder({
         invoice_no: invoiceNo,
-        order_date: orderDate,
+        order_date: orderDate || null,
         brand: brand,
-        product_model: productModel,
-        quantity,
-        delivery_date: deliveryDate,
+        product_model: productModel,  // 自由文本：可包含多个型号+数量
+        quantity: quantity,
+        delivery_date: deliveryDate || null,
         salesperson_name: salespersonName,
         sales_notes: salesNotes
       });
@@ -430,7 +455,7 @@
             <input type="text" class="inline-edit" id="spname-${sp.id}"
               value="${App.escapeHtml(sp.name)}"
               style="width:150px;padding:4px 8px;border:1px solid #ddd;border-radius:4px;"
-              ${!isActive ? 'disabled' : ''}>
+              ${!isActive ? 'disabled style="background:#f5f5f5;color:#999;"' : ''}>
           </td>
           <td>
             <span class="status-badge" style="
@@ -445,7 +470,7 @@
             ${isActive
               ? `<button class="btn btn-sm btn-primary" style="font-size:11px;padding:4px 10px;" onclick="saveSpName(${sp.id})">保存改名</button>
                  <button class="btn btn-sm btn-danger" style="font-size:11px;padding:4px 10px;" onclick="removeSp(${sp.id})">停用</button>`
-              : `<span style="color:#999;font-size:12px;">已停用</span>`
+              : `<button class="btn btn-sm btn-success" style="font-size:11px;padding:4px 10px;" onclick="restoreSp(${sp.id})">✅ 恢复使用</button>`
             }
           </td>
         </tr>`;
@@ -519,7 +544,18 @@
       if (error) {
         showToast('操作失败: ' + error.message, 'error');
       } else {
-        showToast('✅ 已停用', 'success');
+        showToast('✅ 已停用（可随时恢复）', 'success');
+        await loadSalespeopleList();
+      }
+    }
+
+    // 恢复已停用的业务员
+    async function restoreSp(id) {
+      const { error } = await API.updateSalesperson(id, { is_active: true });
+      if (error) {
+        showToast('恢复失败: ' + error.message, 'error');
+      } else {
+        showToast('✅ 已恢复使用！', 'success');
         await loadSalespeopleList();
       }
     }

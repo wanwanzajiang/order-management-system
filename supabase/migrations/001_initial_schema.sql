@@ -26,9 +26,9 @@ CREATE TABLE IF NOT EXISTS orders (
     order_date DATE,              -- 单据日期
     brand TEXT,                    -- 品牌
     product_model TEXT NOT NULL,
-    quantity INTEGER NOT NULL CHECK (quantity > 0),
+    quantity INTEGER NOT NULL CHECK (quantity >= 0),
     delivery_date TEXT,            -- 合同货期/交期（自由文本，如"7天内"、"月底前"）
-    order_status TEXT NOT NULL DEFAULT '调货中' CHECK (order_status IN ('调货中', '路途中', '已到货', '已完结')),
+    order_status TEXT DEFAULT '调货中' CHECK (order_status IN ('调货中', '路途中', '已到货', '已完结')),  -- 允许为空，由仓库填写
     shipping_date DATE,           -- 仓库发货时间（由仓库填写）
     tracking_no TEXT,             -- 快递单号（由仓库填写）
     warehouse_notes TEXT,
