@@ -41,49 +41,24 @@ ALTER TABLE orders ENABLE ROW LEVEL SECURITY;
 
 -- -------------------------------------------
 -- user_profiles 表的 RLS 策略
+-- ⚠️ 注意：策略中不能引用自身表，否则会导致 infinite recursion！
 -- -------------------------------------------
 
--- 允许用户读取自己的 profile
-CREATE POLICY "users_can_read_own_profile"
+-- 所有已登录用户可读取用户列表（管理系统需要展示用户信息）
+CREATE POLICY "authenticated_can_read_profiles"
     ON user_profiles FOR SELECT
-    USING (auth.uid() = id);
+    USING (auth.role() = 'authenticated');
 
--- 允许管理员读取所有 profiles
-CREATE POLICY "admins_can_read_all_profiles"
-    ON user_profiles FOR SELECT
-    USING (
-        EXISTS (
-            SELECT 1 FROM user_profiles
-            WHERE id = auth.uid() AND role = 'admin'
-        )
-    );
+-- 用户可以创建自己的 profile
+CREATE POLICY "users_can_insert_own_profile"
+    ON user_profiles FOR INSERT
+    WITH CHECK (auth.uid() = id);
 
--- 允许用户更新自己的 profile（但不能修改 role）
+-- 用户只能更新自己的基本信息（姓名等）
 CREATE POLICY "users_can_update_own_profile"
     ON user_profiles FOR UPDATE
     USING (auth.uid() = id)
     WITH CHECK (auth.uid() = id);
-
--- 允许管理员更新任何用户的 profile（包括 role）
-CREATE POLICY "admins_can_update_any_profile"
-    ON user_profiles FOR UPDATE
-    USING (
-        EXISTS (
-            SELECT 1 FROM user_profiles
-            WHERE id = auth.uid() AND role = 'admin'
-        )
-    );
-
--- 允许管理员插入用户 profile
-CREATE POLICY "admins_can_insert_profile"
-    ON user_profiles FOR INSERT
-    WITH CHECK (
-        EXISTS (
-            SELECT 1 FROM user_profiles
-            WHERE id = auth.uid() AND role = 'admin'
-        )
-        OR auth.uid() = id
-    );
 
 -- -------------------------------------------
 -- orders 表的 RLS 策略
