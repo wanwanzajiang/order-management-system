@@ -159,6 +159,72 @@ const API = {
   },
 
   // ============================================
+  // 订单留言系统
+  // ============================================
+
+  /** 获取某订单的全部留言（按时间正序） */
+  async getMessages(orderId) {
+    const { data, error } = await SUPABASE
+      .from('order_messages')
+      .select('*')
+      .eq('order_id', orderId)
+      .order('created_at', { ascending: true });
+    return { data: data || [], error };
+  },
+
+  /** 发送留言 */
+  async addMessage(msg) {
+    const { data, error } = await SUPABASE
+      .from('order_messages')
+      .insert({
+        order_id: msg.order_id,
+        author_role: msg.author_role,
+        author_name: msg.author_name,
+        content: msg.content,
+        is_read: false
+      })
+      .select()
+      .single();
+    return { data, error };
+  },
+
+  /** 标记某订单的指定角色留言为已读 */
+  async markMessagesRead(orderId, targetRole) {
+    const { error } = await SUPABASE
+      .from('order_messages')
+      .update({ is_read: true })
+      .eq('order_id', orderId)
+      .eq('author_role', targetRole)
+      .eq('is_read', false);
+    return { error };
+  },
+
+  /** 批量获取多个订单的未读留言数 */
+  async getUnreadCounts(orderIds) {
+    if (!orderIds || orderIds.length === 0) return {};
+    const { data, error } = await SUPABASE
+      .from('order_messages')
+      .select('order_id')
+      .eq('is_read', false)
+      .in('order_id', orderIds);
+    if (error || !data) return {};
+    const counts = {};
+    data.forEach(m => {
+      counts[m.order_id] = (counts[m.order_id] || 0) + 1;
+    });
+    return counts;
+  },
+
+  /** 删除留言（超管/管理员用） */
+  async deleteMessage(msgId) {
+    const { error } = await SUPABASE
+      .from('order_messages')
+      .delete()
+      .eq('id', msgId);
+    return { error };
+  },
+
+  // ============================================
   // 统计相关（基于业务员名字 + 订单状态）
   // ============================================
 
