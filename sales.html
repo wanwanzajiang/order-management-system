@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>订单管理 - 业务员</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="header">
+    <div class="container">
+      <h1>📦 订单管理系统 - 业务员</h1>
+      <div class="header-info">
+        <div class="user-info">
+          <span id="userName">业务员</span>
+          <span class="role-badge" id="userRole">业务员</span>
+        </div>
+        <button class="btn btn-secondary btn-sm" onclick="Auth.logout()">退出登录</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="card">
+      <h3 class="card-title">🔍 查询我的订单</h3>
+      <div class="search-box">
+        <input type="text" id="searchInvoice" class="form-control" placeholder="请输入发票号进行查询">
+        <button class="btn btn-primary" onclick="searchOrder()">查询</button>
+      </div>
+      <div id="searchResult" style="display:none;"></div>
+    </div>
+
+    <div class="card">
+      <h3 class="card-title">📋 我的订单列表</h3>
+      <div id="ordersContainer">
+        <div class="loading">加载中...</div>
+      </div>
+    </div>
+  </main>
+
+  <footer class="footer">
+    © 2024 订单管理系统
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/config.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    if (!Auth.requireRole([CONFIG.ROLES.SALES])) {
+      // Already redirected
+    } else {
+      init();
+    }
+
+    async function init() {
+      const user = Auth.getUser();
+      document.getElementById('userName').textContent = user.full_name || user.email;
+      document.getElementById('userRole').textContent = App.getRoleName(user.role);
+      await loadMyOrders();
+    }
+
+    async function loadMyOrders() {
+      const container = document.getElementById('ordersContainer');
+      App.showLoading(container);
+
+      const user = Auth.getUser();
+      const { data, error } = await API.getOrders({ sales_id: user.id });
+
+      if (error) {
+        App.showError(container, '加载订单失败: ' + error.message);
+        return;
+      }
+
+      if (!data || data.length === 0) {
+        App.showEmpty(container, '您还没有创建过订单');
+        return;
+      }
+
+      renderOrders(data);
+    }
+
+    function renderOrders(orders) {
+      const container = document.getElementById('ordersContainer');
+      let html = `
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>发票号</th>
+                <th>产品型号</th>
+                <th>数量</th>
+                <th>状态</th>
+                <th>仓库备注</th>
+                <th>创建时间</th>
+              </tr>
+            </thead>
+            <tbody>
+      `;
+
+      orders.forEach(order => {
+        const statusClass = App.getStatusClass(order.order_status);
+        html += `
+          <tr>
+            <td>${App.escapeHtml(order.invoice_no)}</td>
+            <td>${App.escapeHtml(order.product_model)}</td>
+            <td>${order.quantity}</td>
+            <td><span class="status-badge ${statusClass}">${order.order_status}</span></td>
+            <td>${App.escapeHtml(order.warehouse_notes || '-')}</td>
+            <td>${App.formatDate(order.created_at)}</td>
+          </tr>
+        `;
+      });
+
+      html += '</tbody></table></div>';
+      container.innerHTML = html;
+    }
+
+    document.getElementById('searchInvoice').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        searchOrder();
+      }
+    });
+
+    async function searchOrder() {
+      const invoiceNo = document.getElementById('searchInvoice').value.trim();
+      const resultDiv = document.getElementById('searchResult');
+
+      if (!invoiceNo) {
+        showToast('请输入发票号', 'error');
+        return;
+      }
+
+      resultDiv.style.display = 'block';
+      resultDiv.innerHTML = '<div class="loading">查询中...</div>';
+
+      const user = Auth.getUser();
+      const { data, error } = await API.getOrderByInvoice(invoiceNo);
+
+      if (error || !data) {
+        resultDiv.innerHTML = `<div class="error">未找到发票号为 "${App.escapeHtml(invoiceNo)}" 的订单</div>`;
+        return;
+      }
+
+      if (data.sales_id !== user.id) {
+        resultDiv.innerHTML = `<div class="error">您只能查询本人创建的订单</div>`;
+        return;
+      }
+
+      const statusClass = App.getStatusClass(data.order_status);
+      resultDiv.innerHTML = `
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>发票号</th>
+                <th>产品型号</th>
+                <th>数量</th>
+                <th>状态</th>
+                <th>仓库备注</th>
+                <th>创建时间</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>${App.escapeHtml(data.invoice_no)}</td>
+                <td>${App.escapeHtml(data.product_model)}</td>
+                <td>${data.quantity}</td>
+                <td><span class="status-badge ${statusClass}">${data.order_status}</span></td>
+                <td>${App.escapeHtml(data.warehouse_notes || '-')}</td>
+                <td>${App.formatDate(data.created_at)}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      `;
+    }
+  </script>
+</body>
+</html>
