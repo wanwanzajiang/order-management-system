@@ -87,6 +87,15 @@
       }
     }
 
+    let whDateSortAsc = false;
+
+    function toggleDateSort() {
+      whDateSortAsc = !whDateSortAsc;
+      const icon = document.getElementById('whDateSortIcon');
+      if (icon) icon.textContent = whDateSortAsc ? '↑ 升序' : '↓ 降序';
+      loadOrders();
+    }
+
     async function loadOrders() {
       const container = document.getElementById('ordersContainer');
       App.showLoading(container);
@@ -118,6 +127,11 @@
     function renderOrders(orders) {
       const container = document.getElementById('ordersContainer');
 
+      orders.sort((a, b) => {
+        const da = a.order_date || '', db = b.order_date || '';
+        return whDateSortAsc ? da.localeCompare(db) : db.localeCompare(da);
+      });
+
       // 按状态分组
       const groups = {};
       orders.forEach(o => {
@@ -140,7 +154,7 @@
             <table>
               <thead>
                 <tr>
-                  <th>发票号</th><th>单据日期</th><th style="min-width:200px;">产品明细</th>
+                  <th>发票号</th><th style="cursor:pointer;user-select:none;white-space:nowrap;" onclick="toggleDateSort()">单据日期 <span id="whDateSortIcon" style="font-size:11px;color:#999;">↓ 降序</span></th><th style="min-width:200px;">产品明细</th>
                   <th>总数量</th><th>业务员</th>
                   <th style="color:#e07a5f;font-weight:600;">📅 发货时间</th>
                   <th style="color:#e07a5f;font-weight:600;">📦 快递单号</th>

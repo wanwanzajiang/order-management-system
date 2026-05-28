@@ -129,7 +129,12 @@ const Auth = {
 
   isAdmin() {
     const user = this.getUser();
-    return user && user.role === CONFIG.ROLES.ADMIN;
+    return user && (user.role === CONFIG.ROLES.ADMIN || user.role === CONFIG.ROLES.SUPER);
+  },
+
+  isSuper() {
+    const user = this.getUser();
+    return user && user.role === CONFIG.ROLES.SUPER;
   },
 
   isWarehouse() {
@@ -168,6 +173,7 @@ const Auth = {
       return;
     }
     switch (user.role) {
+      case CONFIG.ROLES.SUPER:
       case CONFIG.ROLES.ADMIN:
         window.location.href = 'admin.html';
         break;

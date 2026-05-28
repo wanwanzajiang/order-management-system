@@ -5,6 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>订单管理 - 管理员</title>
   <link rel="stylesheet" href="css/style.css">
+  <style>
+    #orderEditModal.show{opacity:1;pointer-events:auto;}
+    #orderEditModal.show #orderEditBox{transform:translateY(0);}
+    .form-row-c{display:flex;gap:12px;flex-wrap:wrap;}
+  </style>
 </head>
 <body>
   <header class="header">
@@ -14,6 +19,9 @@
         <div class="user-info">
           <span id="userName">管理员</span>
           <span class="role-badge" id="userRole">管理员</span>
+          <span id="superEntry" style="display:none;">
+            <a href="console.html" style="font-size:11px;color:#667eea;text-decoration:none;margin-left:8px;padding:3px 10px;background:#f0f4ff;border-radius:12px;">⚙ 控制台</a>
+          </span>
         </div>
         <button class="btn btn-secondary btn-sm" onclick="Auth.logout()">退出登录</button>
       </div>
@@ -186,7 +194,7 @@
     // 页脚年份
     document.getElementById('footerYear').textContent = new Date().getFullYear();
 
-    if (!Auth.requireRole([CONFIG.ROLES.ADMIN])) {
+    if (!Auth.requireRole([CONFIG.ROLES.ADMIN, CONFIG.ROLES.SUPER])) {
       // 已重定向
     } else {
       init();
@@ -217,6 +225,9 @@
       const user = Auth.getUser();
       document.getElementById('userName').textContent = user.full_name || user.email;
       document.getElementById('userRole').textContent = App.getRoleName(user.role);
+      if (user.role === CONFIG.ROLES.SUPER) {
+        document.getElementById('superEntry').style.display = '';
+      }
 
       // 默认填今天日期
       document.getElementById('orderDate').value = new Date().toISOString().split('T')[0];
@@ -362,12 +373,20 @@
     }
 
     // ========== Dashboard 数据概览 ==========
-    let salesSortDesc = true; // 默认降序
+    let salesSortDesc = true;
+    let orderDateSortAsc = false;
 
     function toggleSalesSort() {
       salesSortDesc = !salesSortDesc;
       document.getElementById('salesSortIcon').textContent = salesSortDesc ? '↓ 降序' : '↑ 升序';
       loadDashboard();
+    }
+
+    function toggleOrderDateSort() {
+      orderDateSortAsc = !orderDateSortAsc;
+      const icon = document.getElementById('orderDateSortIcon');
+      if (icon) icon.textContent = orderDateSortAsc ? '↑ 升序' : '↓ 降序';
+      loadOrders();
     }
 
     async function loadDashboard() {
@@ -478,12 +497,18 @@
 
     function renderOrders(orders) {
       const container = document.getElementById('ordersContainer');
+
+      orders.sort((a, b) => {
+        const da = a.order_date || '', db = b.order_date || '';
+        return orderDateSortAsc ? da.localeCompare(db) : db.localeCompare(da);
+      });
+
       let html = `
         <div class="table-wrapper" style="overflow-x:auto;">
           <table>
             <thead>
               <tr>
-                <th>发票号</th><th>单据日期</th><th style="min-width:200px;">产品明细</th>
+                <th>发票号</th><th style="cursor:pointer;user-select:none;white-space:nowrap;" onclick="toggleOrderDateSort()">单据日期 <span id="orderDateSortIcon" style="font-size:11px;color:#999;">↓ 降序</span></th><th style="min-width:200px;">产品明细</th>
                 <th>总数量</th><th>状态</th>
                 <th>业务员</th><th>发货时间</th><th>快递单号</th>
                 <th>仓库备注</th><th>业务备注</th><th>创建时间</th><th>操作</th>
@@ -531,12 +556,20 @@
           <td style="white-space:nowrap;font-size:12px;color:#999;">${App.formatDate(order.created_at)}</td>
           <td>
             <button class="btn btn-danger btn-sm" onclick="deleteOrder(${order.id})">删除</button>
+            <button id="eb-${order.id}" class="btn btn-sm" style="display:none;background:#667eea;color:#fff;border-color:#667eea;margin-left:4px;" onclick="openOrderEditor(${order.id})">✏️ 编辑</button>
           </td>
         </tr>`;
       });
 
       html += '</tbody></table></div>';
       container.innerHTML = html;
+
+      if (Auth.isSuper()) {
+        orders.forEach(o => {
+          const b = document.getElementById('eb-' + o.id);
+          if (b) b.style.display = '';
+        });
+      }
     }
 
     // 新增订单（多产品版 - 动态行）
@@ -825,6 +858,139 @@
       btn.disabled = loading;
       btn.textContent = text;
     }
+
+    // ========== 超管：订单编辑弹窗 ==========
+    let _editingOrderId = null;
+    let _eprc = 0;
+
+    function openOrderEditor(oid) {
+      _editingOrderId = oid;
+      const overlay = document.getElementById('orderEditModal');
+      const body = document.getElementById('orderEditModalBody');
+      body.innerHTML = '<p style="text-align:center;color:#999;padding:30px;">加载中...</p>';
+      overlay.classList.add('show');
+
+      SUPABASE.from('orders').select('*').eq('id', oid).single().then(({ data: order }) => {
+        if (!order) { body.innerHTML = '<p style="color:red;text-align:center;">订单不存在</p>'; return; }
+        document.getElementById('editModalTitle2').textContent = '✏️ 编辑: ' + order.invoice_no;
+
+        let prods = [];
+        if (typeof order.product_model === 'string' && order.product_model.startsWith('[')) {
+          try { prods = JSON.parse(order.product_model); } catch(e) {}
+        }
+
+        body.innerHTML = `
+<form onsubmit="saveEdited(event)">
+<div class="form-row-c" style="margin-bottom:12px;">
+  <div class="form-group"><label>发票号 *</label><input type="text" id="ei_no" value="${App.escapeHtml(order.invoice_no)}" required style="width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:6px;"></div>
+  <div class="form-group"><label>单据日期</label><input type="date" id="ei_date" value="${order.order_date || ''}" style="width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:6px;"></div>
+  <div class="form-group"><label>总数量</label><input type="number" id="ei_qty" value="${order.quantity || 0}" min="0" style="width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:6px;"></div>
+</div>
+<div class="form-row-c" style="margin-bottom:12px;">
+  <div class="form-group"><label>状态</label><select id="ei_status" style="width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:6px;"><option value="">- 待填写 -</option>${CONFIG.ORDER_STATUSES.map(s => `<option value="${s}" ${s === order.order_status ? 'selected' : ''}>${s}</option>`).join('')}</select></div>
+  <div class="form-group"><label>业务员</label><input type="text" id="ei_sp" value="${App.escapeHtml(order.salesperson_name || '')}" style="width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:6px;"></div>
+  <div class="form-group"><label>发货时间</label><input type="date" id="ei_ship" value="${order.shipping_date || ''}" style="width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:6px;"></div>
+</div>
+<div class="form-row-c" style="margin-bottom:12px;">
+  <div class="form-group"><label>快递单号</label><input type="text" id="ei_track" value="${App.escapeHtml(order.tracking_no || '')}" style="width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:6px;"></div>
+  <div class="form-group"><label>仓库备注</label><input type="text" id="ei_wnotes" value="${App.escapeHtml(order.warehouse_notes || '')}" style="width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:6px;"></div>
+  <div class="form-group"><label>业务备注</label><input type="text" id="ei_snotes" value="${App.escapeHtml(order.sales_notes || '')}" style="width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:6px;"></div>
+</div>
+
+<div style="border:1.5px solid #667eea;border-radius:10px;padding:14px;background:#fafbff;margin:10px 0;">
+  <div style="display:flex;justify-content:space-between;margin-bottom:8px;font-size:13px;font-weight:500;color:#444;">📦 产品明细 <span id="eisum" style="font-size:12px;color:#667eea;"></span></div>
+  <div style="display:flex;gap:6px;padding:6px 8px;background:#f0f4ff;border-radius:6px;font-size:11px;color:#666;"><span style="width:28px;"></span><span style="flex:1;">品牌</span><span style="flex:1.4;">型号</span><span style="width:50px;text-align:center;">数量</span><span style="flex:1;">货期</span><span style="width:24px;"></span></div>
+  <div id="epRows"></div>
+  <button type="button" onclick="addEPRow()" style="margin-top:8px;padding:5px 14px;background:#f0f4ff;color:#667eea;border:1px dashed #99aaff;border-radius:5px;font-size:12px;cursor:pointer;">+ 添加行</button>
+</div>
+
+<div style="margin-top:16px;display:flex;gap:10px;">
+  <button type="submit" class="btn btn-primary">💾 保存全部修改</button>
+  <button type="button" class="btn btn-secondary" onclick="closeEditModal()">取消</button>
+</div>
+</form>`;
+        _eprc = 0;
+        if (prods.length) prods.forEach(p => addEPRow(p)); else addEPRow();
+        updateEISum();
+      });
+    }
+
+    function closeEditModal() {
+      document.getElementById('orderEditModal').classList.remove('show');
+      _editingOrderId = null;
+    }
+
+    function addEPRow(data) {
+      _eprc++;
+      const n = _eprc;
+      const c = document.getElementById('epRows');
+      const r = document.createElement('div');
+      r.style = 'display:flex;gap:6px;align-items:center;padding:6px 8px;margin-bottom:3px;background:#fff;border-radius:4px;border:0.5px solid #e0e0e0;';
+      r.id = 'epr-' + n;
+      r.innerHTML = `<span style="font-size:11px;color:#aaa;width:28px;">#${n}</span><input type="text" placeholder="品牌" value="${App.escapeHtml(data ? data.brand || '' : '')}" style="flex:1;padding:5px 7px;font-size:12px;border:1px solid #ddd;border-radius:4px;" class="eir-b"><input type="text" placeholder="型号" value="${App.escapeHtml(data ? data.model || '' : '')}" style="flex:1.4;padding:5px 7px;font-size:12px;border:1px solid #ddd;border-radius:4px;" class="eir-m"><input type="number" placeholder="数量" value="${data ? (data.qty || '') : ''}" min="0" style="width:50px;padding:5px 4px;font-size:12px;border:1px solid #ddd;border-radius:4px;text-align:center;" class="eir-q"><input type="text" placeholder="货期" value="${App.escapeHtml(data ? data.delivery || '' : '')}" style="flex:1;padding:5px 7px;font-size:12px;border:1px solid #ddd;border-radius:4px;" class="eir-d"><button type="button" onclick="this.parentElement.remove();updateEISum();renumberEP();" style="padding:0 6px;background:none;border:none;cursor:pointer;color:#e24b4a;font-size:17px;">×</button>`;
+      c.appendChild(r);
+      r.querySelectorAll('input').forEach(i => i.addEventListener('input', updateEISum));
+      updateEISum();
+    }
+
+    function renumberEP() {
+      document.querySelectorAll('#epRows > div').forEach((r, i) => r.querySelector('span').textContent = '#' + (i + 1));
+    }
+
+    function updateEISum() {
+      let t = 0, c = 0;
+      document.querySelectorAll('#epRows .eir-q').forEach(i => {
+        const v = parseInt(i.value);
+        if (!isNaN(v) && v > 0) { t += v; c++; }
+      });
+      document.getElementById('eisum').textContent = c ? `${c}产品·总量${t}` : '';
+    }
+
+    function collectEP() {
+      const p = []; let ok = false;
+      document.querySelectorAll('#epRows > div').forEach(r => {
+        const b = r.querySelector('.eir-b').value.trim(), m = r.querySelector('.eir-m').value.trim(),
+              qv = r.querySelector('.eir-q').value.trim(), d = r.querySelector('.eir-d').value.trim(), q = qv ? parseInt(qv) : 0;
+        if (m || b) { p.push({ brand: b, model: m, qty: Math.max(0, q), delivery: d }); if (m) ok = true; }
+      });
+      return { products: p, ok };
+    }
+
+    async function saveEdited(e) {
+      e.preventDefault();
+      if (!_editingOrderId) return;
+      const { products, ok } = collectEP();
+      const payload = {
+        invoice_no: document.getElementById('ei_no').value.trim(),
+        order_date: document.getElementById('ei_date').value || null,
+        quantity: parseInt(document.getElementById('ei_qty').value) || 0,
+        order_status: document.getElementById('ei_status').value || null,
+        salesperson_name: document.getElementById('ei_sp').value.trim(),
+        shipping_date: document.getElementById('ei_ship').value || null,
+        tracking_no: document.getElementById('ei_track').value.trim() || null,
+        warehouse_notes: document.getElementById('ei_wnotes').value.trim(),
+        sales_notes: document.getElementById('ei_snotes').value.trim(),
+        product_model: JSON.stringify(products)
+      };
+      if (!payload.invoice_no || !ok) { showToast('发票号和至少一个型号必填', 'error'); return; }
+      const btn = e.target.querySelector('button[type="submit"]');
+      setBtnLoading(btn, true, '保存中...');
+      const { error } = await API.updateOrder(_editingOrderId, payload);
+      setBtnLoading(btn, false, '💾 保存全部修改');
+      if (error) { showToast('保存失败: ' + error.message, 'error'); }
+      else { showToast('✅ 订单已更新！', 'success'); closeEditModal(); await loadOrders(); }
+    }
   </script>
+
+  <!-- 超管编辑弹窗 -->
+  <div class="modal-overlay" id="orderEditModal" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:9999;opacity:0;pointer-events:none;transition:opacity .25s;">
+    <div style="background:#fff;border-radius:14px;width:95%;max-width:800px;max-height:85vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.25);transform:translateY(20px);transition:transform .25s;" id="orderEditBox">
+      <div style="padding:18px 22px;display:flex;justify-content:space-between;align-items:center;background:linear-gradient(135deg,#667eea,#764ba2);border-radius:14px 14px 0 0;">
+        <h3 id="editModalTitle2" style="margin:0;color:#fff;font-size:16px;">编辑订单</h3>
+        <button onclick="closeEditModal()" style="background:none;border:none;color:rgba(255,255,255,0.8);font-size:22px;cursor:pointer;">&times;</button>
+      </div>
+      <div id="orderEditModalBody" style="padding:22px;"></div>
+    </div>
+  </div>
 </body>
 </html>
