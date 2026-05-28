@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>留言系统 - 建表向导</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:-apple-system,'PingFang SC','Microsoft YaHei',sans-serif;background:linear-gradient(135deg,#fdfbf7 0%,#f5e6d3 100%);min-height:100vh;padding:20px;}
+.container{max-width:800px;margin:0 auto;}
+h1{color:#e07a5f;text-align:center;font-size:24px;margin-bottom:6px;text-shadow:0 1px 2px rgba(224,122,95,0.2);}
+.subtitle{text-align:center;color:#999;font-size:13px;margin-bottom:20px;}
+.card{background:rgba(255,255,255,0.85);border-radius:16px;padding:20px;margin-bottom:16px;box-shadow:0 4px 20px rgba(224,122,95,0.08);backdrop-filter:blur(10px);border:1px solid rgba(240,217,203,0.5);}
+.card h2{color:#e07a5f;font-size:16px;margin-bottom:12px;display:flex;align-items:center;gap:8px;}
+.step-num{display:inline-flex;width:26px;height:26px;background:linear-gradient(135deg,#e07a5f,#c65d43);color:#fff;border-radius:50%;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;}
+.sql-box{background:#1e1e2e;border-radius:10px;padding:16px;overflow-x:auto;position:relative;}
+.sql-box pre{color:#cdd6f4;font-size:12px;line-height:1.7;margin:0;font-family:'SF Mono','Fira Code',monospace;white-space:pre;}
+.copy-btn{position:absolute;top:10px;right:10px;background:#e07a5f;color:#fff;border:none;padding:6px 14px;border-radius:8px;cursor:pointer;font-size:12px;font-weight:500;transition:opacity .2s;}
+.copy-btn:hover{opacity:.85;}
+.copy-btn.copied{background:#27ae60;}
+table{width:100%;border-collapse:collapse;font-size:13px;}
+th{background:linear-gradient(135deg,#e07a5f,#c65d43);color:#fff;padding:10px 12px;text-align:left;font-weight:600;}
+td{padding:9px 12px;border-bottom:1px solid #f0d9cb;}
+tr:hover td{background:rgba(224,122,95,0.04);}
+.role-tag{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:500;}
+.role-super{background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;}
+.role-admin{background:#3498db;color:#fff;}
+.role-wh{background:#e67e22;color:#fff;}
+.role-sales{background:#27ae60;color:#fff;}
+.status-done{color:#27ae60;font-weight:600;}
+.status-pending{color:#e67e22;font-weight:600;}
+.footer{text-align:center;color:#bbb;font-size:12px;margin-top:16px;
+</style>
+</head>
+<body>
+<div class="container">
+
+<h1>🫧 订单留言系统 - 部署向导</h1>
+<p class="subtitle">最后一步：在 Supabase 中创建留言表</p>
+
+<!-- 账号信息 -->
+<div class="card">
+  <h2><span class="step-num">📋</span> 所有账号信息</h2>
+  <table>
+    <tr><th>角色</th><th>邮箱</th><th>密码</th><th>名字</th></tr>
+    <tr>
+      <td><span class="role-tag role-super">超级管理员</span></td>
+      <td>wan@zijiang.com</td>
+      <td><strong>msrrywanwan</strong></td>
+      <td>丸丸</td>
+    </tr>
+    <tr>
+      <td><span class="role-tag role-admin">管理员</span></td>
+      <td>wanwan@xx.com</td>
+      <td>smfmqssyjh</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td><span class="role-tag role-wh">仓库人员</span></td>
+      <td>cangcang@xx.com</td>
+      <td>cabjcbxsna</td>
+      <td>-</td>
+    </tr>
+    <tr>
+      <td><span class="role-tag role-sales">业务员</span></td>
+      <td>yeye@xx.com</td>
+      <td>whwyppyjlt</td>
+      <td>-</td>
+    </tr>
+  </table>
+</div>
+
+<!-- 完成状态 -->
+<div class="card">
+  <h2><span class="step-num">✅</span> 已完成的工作</h2>
+  <table>
+    <tr><td style="width:50%">业务员页面（卡片式布局）</td><td class="status-done">已推送 ✅</td></tr>
+    <tr><td>业务员端留言功能（弹窗对话）</td><td class="status-done">已推送 ✅</td></tr>
+    <tr><td>仓库端未读标记 + 留言回复</td><td class="status-done">已推送 ✅</td></tr>
+    <tr><td>管理员端留言列 + 查看面板</td><td class="status-done">已推送 ✅</td></tr>
+    <tr><td>超管控制台留言管理</td><td class="status-done">已推送 ✅</td></tr>
+    <tr><td>API层（5个留言方法）</td><td class="status-done">已推送 ✅</td></tr>
+    <tr><td>超管账号更新（邮箱/密码/名字）</td><td class="status-done">已推送 ✅</td></tr>
+    <tr><td><strong>数据库建表（order_messages）</strong></td><td class="status-pending">⬇️ 需要你执行 ⬇️</td></tr>
+  </table>
+</div>
+
+<!-- SQL 执行步骤 -->
+<div class="card" style="border:2px dashed #e07a5f;">
+  <h2><span class="step-num">1</span> 打开 Supabase SQL Editor</h2>
+  <p style="color:#555;font-size:14px;line-height:1.8;margin-bottom:8px;">
+    👉 点击这个链接直接进入：<br>
+    <a href="https://supabase.com/dashboard/project/omhtrpqdxdwbmwfdkgeg/sql/new" target="_blank"
+       style="display:inline-block;margin-top:8px;padding:10px 24px;background:linear-gradient(135deg,#e07a5f,#c65d43);color:#fff;text-decoration:none;border-radius:10px;font-weight:500;">
+      🚀 点我打开 Supabase SQL Editor →
+    </a>
+  </p>
+</div>
+
+<div class="card" style="border:2px dashed #e07a5f;">
+  <h2><span class="step-num">2</span> 复制并粘贴以下 SQL，然后点 ▶ Run</h2>
+  <div class="sql-box">
+    <button class="copy-btn" onclick="copySQL()">📋 复制 SQL</button>
+    <pre id="sqlContent">DROP TABLE IF EXISTS order_messages CASCADE;
+
+CREATE TABLE order_messages (
+  id BIGSERIAL PRIMARY KEY,
+  order_id BIGINT NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+  author_role TEXT NOT NULL CHECK (author_role IN ('sales','warehouse','admin','super_admin')),
+  author_name TEXT NOT NULL DEFAULT '',
+  content TEXT NOT NULL DEFAULT '',
+  is_read BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX idx_msg_order ON order_messages(order_id, created_at DESC);
+CREATE INDEX idx_msg_unread ON order_messages(order_id) WHERE is_read = FALSE AND author_role = 'sales';
+
+ALTER TABLE order_messages ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY msg_select ON order_messages FOR SELECT USING (TRUE);
+CREATE POLICY msg_insert ON order_messages FOR INSERT WITH CHECK (TRUE);
+CREATE POLICY msg_update ON order_messages FOR UPDATE USING (TRUE);
+CREATE POLICY msg_delete ON order_messages FOR DELETE USING (TRUE);</pre>
+  </div>
+</div>
+
+<div class="card">
+  <h2><span class="step-num">3</span> 验证成功 🎉</h2>
+  <p style="color:#555;font-size:14px;line-height:1.8;">
+    执行成功后会看到 <strong style="color:#27ae60;">Success</strong> 提示。<br>
+    然后就可以用业务员账号登录，测试留言功能啦！<br>
+    业务员查单 → 点 💬留言 → 仓库看到红点 → 回复 → 业务员刷新看到回复 ✨
+  </p>
+</div>
+
+<p class="footer">GitHub Pages: https://wanwanzajiang.github.io/order-management-system/login.html</p>
+
+</div>
+
+<script>
+function copySQL() {
+  const sql = document.getElementById('sqlContent').textContent;
+  navigator.clipboard.writeText(sql).then(() => {
+    const btn = document.querySelector('.copy-btn');
+    btn.textContent = '✅ 已复制！去粘贴吧';
+    btn.classList.add('copied');
+    setTimeout(() => {
+      btn.textContent = '📋 复制 SQL';
+      btn.classList.remove('copied');
+    }, 2500);
+  });
+}
+</script>
+</body>
+</html>
