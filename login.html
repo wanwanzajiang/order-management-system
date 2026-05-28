@@ -5,40 +5,30 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>订单管理系统 - 登录</title>
   <link rel="stylesheet" href="css/style.css">
-  <style>
-    .register-link {
-      text-align: center;
-      margin-top: 16px;
-      font-size: 14px;
-      color: #666;
-    }
-    .register-link a {
-      color: #667eea;
-      text-decoration: none;
-    }
-    .register-link a:hover {
-      text-decoration: underline;
-    }
-  </style>
 </head>
 <body>
   <div class="login-container">
     <div class="login-box">
-      <h2>订单管理系统</h2>
+      <h2>📦 订单管理系统</h2>
+      <p style="text-align:center;color:#888;font-size:13px;margin-bottom:20px;">请使用管理员分配的账号登录</p>
+
       <div id="loginError" class="login-error"></div>
+
       <form id="loginForm">
         <div class="form-group">
-          <label for="email">邮箱</label>
-          <input type="email" id="email" class="form-control" placeholder="请输入邮箱" required>
+          <label for="email">邮箱地址</label>
+          <input type="email" id="email" class="form-control" placeholder="your@email.com" required autocomplete="email">
         </div>
         <div class="form-group">
           <label for="password">密码</label>
-          <input type="password" id="password" class="form-control" placeholder="请输入密码" required>
+          <input type="password" id="password" class="form-control" placeholder="请输入密码" required autocomplete="current-password">
         </div>
-        <button type="submit" class="btn btn-primary">登录</button>
+        <button type="submit" class="btn btn-primary">登 录</button>
       </form>
-      <div class="register-link">
-        <a href="#" id="registerLink">没有账号？联系管理员创建</a>
+
+      <div style="text-align:center;margin-top:20px;padding-top:16px;border-top:1px solid #eee;">
+        <p style="font-size:12px;color:#aaa;">还没有账号？请联系管理员为您创建</p>
+        <p style="font-size:12px;color:#bbb;margin-top:4px;">测试账号：admin@example.com / admin123</p>
       </div>
     </div>
   </div>
@@ -58,6 +48,8 @@
       const errorEl = document.getElementById('loginError');
 
       errorEl.style.display = 'none';
+      errorEl.textContent = '';
+
       const btn = e.target.querySelector('button[type="submit"]');
       btn.disabled = true;
       btn.textContent = '登录中...';
@@ -65,12 +57,14 @@
       const result = await Auth.login(email, password);
 
       if (result.success) {
-        Auth.redirectByRole();
+        // 登录成功，跳转到对应页面
+        btn.textContent = '跳转中...';
+        setTimeout(() => Auth.redirectByRole(), 300);
       } else {
         errorEl.textContent = result.error || '登录失败';
         errorEl.style.display = 'block';
         btn.disabled = false;
-        btn.textContent = '登录';
+        btn.textContent = '登 录';
       }
     });
   </script>

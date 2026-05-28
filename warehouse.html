@@ -23,6 +23,16 @@
   <main class="container">
     <div class="card">
       <h3 class="card-title">📋 全部订单</h3>
+      <div class="filter-bar">
+        <label>筛选状态：</label>
+        <select id="filterStatus" class="form-control" style="width:auto;min-width:140px;" onchange="loadOrders()">
+          <option value="">全部状态</option>
+          <option value="调货中">调货中</option>
+          <option value="路途中">路途中</option>
+          <option value="已到货">已到货</option>
+          <option value="已完结">已完结</option>
+        </select>
+      </div>
       <div id="ordersContainer">
         <div class="loading">加载中...</div>
       </div>
@@ -30,7 +40,7 @@
   </main>
 
   <footer class="footer">
-    © 2024 订单管理系统
+    © <span id="footerYear"></span> 订单管理系统
   </footer>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -39,8 +49,10 @@
   <script src="js/api.js"></script>
   <script src="js/app.js"></script>
   <script>
+    document.getElementById('footerYear').textContent = new Date().getFullYear();
+
     if (!Auth.requireRole([CONFIG.ROLES.WAREHOUSE])) {
-      // Already redirected
+      // 已重定向
     } else {
       init();
     }
@@ -56,7 +68,11 @@
       const container = document.getElementById('ordersContainer');
       App.showLoading(container);
 
-      const { data, error } = await API.getOrders();
+      const filters = {};
+      const statusFilter = document.getElementById('filterStatus').value;
+      if (statusFilter) filters.order_status = statusFilter;
+
+      const { data, error } = await API.getOrders(filters);
 
       if (error) {
         App.showError(container, '加载订单失败: ' + error.message);
@@ -78,42 +94,38 @@
           <table>
             <thead>
               <tr>
-                <th>发票号</th>
-                <th>产品型号</th>
-                <th>数量</th>
-                <th>状态</th>
-                <th>仓库备注</th>
-                <th>业务员</th>
-                <th>创建时间</th>
-                <th>操作</th>
+                <th>发票号</th><th>产品型号</th><th>数量</th><th>状态</th>
+                <th>仓库备注</th><th>业务员</th><th>创建时间</th><th>操作</th>
               </tr>
             </thead>
-            <tbody>
-      `;
+            <tbody>`;
 
       orders.forEach(order => {
         const canDelete = order.order_status === '已完结';
-        html += `
-          <tr data-id="${order.id}">
-            <td>${App.escapeHtml(order.invoice_no)}</td>
-            <td>${App.escapeHtml(order.product_model)}</td>
-            <td>${order.quantity}</td>
-            <td>
-              <select class="form-control status-select" onchange="updateStatus(${order.id}, this.value)" style="width:120px;">
-                ${CONFIG.ORDER_STATUSES.map(s => `<option value="${s}" ${s === order.order_status ? 'selected' : ''}>${s}</option>`).join('')}
-              </select>
-            </td>
-            <td>
-              <input type="text" class="notes-input warehouse-notes" value="${App.escapeHtml(order.warehouse_notes || '')}"
-                onblur="updateWarehouseNotes(${order.id}, this.value)" placeholder="填写仓库备注">
-            </td>
-            <td>${App.escapeHtml(order.user_profiles?.full_name || '-')}</td>
-            <td>${App.formatDate(order.created_at)}</td>
-            <td>
-              ${canDelete ? `<button class="btn btn-danger btn-sm" onclick="deleteOrder(${order.id})">删除</button>` : '<span style="color:#999">-</span>'}
-            </td>
-          </tr>
-        `;
+        html += `<tr data-id="${order.id}">
+          <td>${App.escapeHtml(order.invoice_no)}</td>
+          <td>${App.escapeHtml(order.product_model)}</td>
+          <td>${order.quantity}</td>
+          <td>
+            <select class="form-control status-select" onchange="updateStatus(${order.id}, this.value)" style="width:120px;">
+              ${CONFIG.ORDER_STATUSES.map(s =>
+                `<option value="${s}" ${s === order.order_status ? 'selected' : ''}>${s}</option>`
+              ).join('')}
+            </select>
+          </td>
+          <td>
+            <input type="text" class="notes-input warehouse-notes"
+              value="${App.escapeHtml(order.warehouse_notes || '')}"
+              onblur="updateWarehouseNotes(${order.id}, this.value)" placeholder="填写仓库备注">
+          </td>
+          <td>${App.escapeHtml(order.user_profiles?.full_name || '-')}</td>
+          <td>${App.formatDate(order.created_at)}</td>
+          <td>
+            ${canDelete
+              ? `<button class="btn btn-danger btn-sm" onclick="deleteOrder(${order.id})">删除</button>`
+              : '<span style="color:#ccc;font-size:12px;">仅可删除已完结订单</span>'}
+          </td>
+        </tr>`;
       });
 
       html += '</tbody></table></div>';
@@ -125,7 +137,7 @@
       if (error) {
         showToast('更新状态失败: ' + error.message, 'error');
       } else {
-        showToast('状态已更新', 'success');
+        showToast('状态已更新 → ' + status, 'success');
         await loadOrders();
       }
     }
@@ -135,12 +147,12 @@
       if (error) {
         showToast('更新备注失败: ' + error.message, 'error');
       } else {
-        showToast('备注已更新', 'success');
+        showToast('备注已保存', 'success');
       }
     }
 
     async function deleteOrder(orderId) {
-      if (!confirm('确定要删除此已完结订单吗？')) return;
+      if (!confirm('确定要删除此已完结的订单吗？')) return;
 
       const { error } = await API.deleteOrder(orderId);
       if (error) {

@@ -21,37 +21,130 @@
   </header>
 
   <main class="container">
-    <div class="card">
-      <h3 class="card-title">➕ 新增订单</h3>
-      <form id="addOrderForm">
-        <div class="form-row">
-          <div class="form-group">
-            <label for="invoiceNo">发票号 *</label>
-            <input type="text" id="invoiceNo" class="form-control" placeholder="请输入发票号" required>
-          </div>
-          <div class="form-group">
-            <label for="productModel">产品型号 *</label>
-            <input type="text" id="productModel" class="form-control" placeholder="请输入产品型号" required>
-          </div>
-          <div class="form-group">
-            <label for="quantity">数量 *</label>
-            <input type="number" id="quantity" class="form-control" placeholder="请输入数量" min="1" required>
-          </div>
-        </div>
-        <button type="submit" class="btn btn-primary">添加订单</button>
-      </form>
+
+    <!-- Tab 导航 -->
+    <div class="tab-nav" id="tabNav">
+      <button class="tab-btn active" data-tab="dashboard" onclick="switchTab('dashboard')">📊 数据概览</button>
+      <button class="tab-btn" data-tab="orders" onclick="switchTab('orders')">📋 订单管理</button>
+      <button class="tab-btn" data-tab="users" onclick="switchTab('users')">👥 用户管理</button>
     </div>
 
-    <div class="card">
-      <h3 class="card-title">📋 全部订单</h3>
-      <div id="ordersContainer">
-        <div class="loading">加载中...</div>
+    <!-- ===== Tab 1: 数据概览 ===== -->
+    <div class="tab-content active" id="tab-dashboard">
+      <div class="stats-grid" id="statsGrid">
+        <div class="stat-card stat-total"><div class="stat-number">-</div><div class="stat-label">总订单数</div></div>
+        <div class="stat-card stat-pending"><div class="stat-number">-</div><div class="stat-label">调货中</div></div>
+        <div class="stat-card stat-transit"><div class="stat-number">-</div><div class="stat-label">路途中</div></div>
+        <div class="stat-card stat-arrived"><div class="stat-number">-</div><div class="stat-label">已到货</div></div>
+        <div class="stat-card stat-completed"><div class="stat-number">-</div><div class="stat-label">已完结</div></div>
+        <div class="stat-card stat-users"><div class="stat-number">-</div><div class="stat-label">业务员人数</div></div>
+      </div>
+
+      <div class="card">
+        <h3 class="card-title">📈 业务员订单统计</h3>
+        <div id="salesStatsContainer">
+          <div class="loading">加载中...</div>
+        </div>
       </div>
     </div>
+
+    <!-- ===== Tab 2: 订单管理 ===== -->
+    <div class="tab-content" id="tab-orders" style="display:none;">
+      <!-- 新增订单表单 -->
+      <div class="card">
+        <h3 class="card-title">➕ 新增订单</h3>
+        <form id="addOrderForm">
+          <div class="form-row">
+            <div class="form-group">
+              <label for="invoiceNo">发票号 *</label>
+              <input type="text" id="invoiceNo" class="form-control" placeholder="请输入发票号" required>
+            </div>
+            <div class="form-group">
+              <label for="productModel">产品型号 *</label>
+              <input type="text" id="productModel" class="form-control" placeholder="请输入产品型号" required>
+            </div>
+            <div class="form-group">
+              <label for="quantity">数量 *</label>
+              <input type="number" id="quantity" class="form-control" placeholder="请输入数量" min="1" required>
+            </div>
+            <div class="form-group">
+              <label for="salesId">所属业务员 *</label>
+              <select id="salesId" class="form-control" required>
+                <option value="">请选择业务员</option>
+              </select>
+              <small class="form-hint" style="color:#888; font-size:12px;">如无业务员选项，请先到「用户管理」中添加业务员</small>
+            </div>
+          </div>
+          <button type="submit" class="btn btn-primary">添加订单</button>
+        </form>
+      </div>
+
+      <!-- 订单筛选 + 列表 -->
+      <div class="card">
+        <h3 class="card-title">📋 全部订单</h3>
+        <div class="filter-bar">
+          <select id="filterStatus" class="form-control" onchange="loadOrders()" style="width:auto;min-width:140px;">
+            <option value="">全部状态</option>
+            <option value="调货中">调货中</option>
+            <option value="路途中">路途中</option>
+            <option value="已到货">已到货</option>
+            <option value="已完结">已完结</option>
+          </select>
+          <select id="filterSales" class="form-control" onchange="loadOrders()" style="width:auto;min-width:140px;">
+            <option value="">全部业务员</option>
+          </select>
+          <button class="btn btn-secondary btn-sm" onclick="loadOrders()">刷新列表</button>
+        </div>
+        <div id="ordersContainer">
+          <div class="loading">加载中...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== Tab 3: 用户管理 ===== -->
+    <div class="tab-content" id="tab-users" style="display:none;">
+      <div class="card">
+        <h3 class="card-title">➕ 新建用户</h3>
+        <p style="font-size:13px;color:#666;margin-bottom:16px;">填写信息后点击创建，系统将自动生成登录账号。用户可使用邮箱+初始密码登录。</p>
+        <form id="createUserForm">
+          <div class="form-row">
+            <div class="form-group">
+              <label for="newUserEmail">邮箱 *</label>
+              <input type="email" id="newUserEmail" class="form-control" placeholder="user@company.com" required>
+            </div>
+            <div class="form-group">
+              <label for="newUserName">姓名（显示用）</label>
+              <input type="text" id="newUserName" class="form-control" placeholder="张三">
+            </div>
+            <div class="form-group">
+              <label for="newUserRole">角色 *</label>
+              <select id="newUserRole" class="form-control" required>
+                <option value="sales">业务员</option>
+                <option value="warehouse">仓库人员</option>
+                <option value="admin">管理员</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="newUserPassword">初始密码 *</label>
+              <input type="text" id="newUserPassword" class="form-control" placeholder="默认: 123456" value="123456" required>
+            </div>
+          </div>
+          <button type="submit" class="btn btn-primary">创建用户</button>
+        </form>
+      </div>
+
+      <div class="card">
+        <h3 class="card-title">👥 用户列表</h3>
+        <div id="usersContainer">
+          <div class="loading">加载中...</div>
+        </div>
+      </div>
+    </div>
+
   </main>
 
   <footer class="footer">
-    © 2024 订单管理系统
+    © <span id="footerYear"></span> 订单管理系统 · 管理员面板
   </footer>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -60,24 +153,113 @@
   <script src="js/api.js"></script>
   <script src="js/app.js"></script>
   <script>
+    // 页脚年份
+    document.getElementById('footerYear').textContent = new Date().getFullYear();
+
     if (!Auth.requireRole([CONFIG.ROLES.ADMIN])) {
-      // Already redirected
+      // 已重定向
     } else {
       init();
     }
 
+    // ========== Tab 切换 ==========
+    function switchTab(tabName) {
+      // 更新按钮状态
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.tab === tabName);
+      });
+      // 更新内容区域
+      document.querySelectorAll('.tab-content').forEach(content => {
+        content.style.display = 'none';
+        content.classList.remove('active');
+      });
+      const target = document.getElementById('tab-' + tabName);
+      target.style.display = '';
+      target.classList.add('active');
+      // 加载数据
+      if (tabName === 'dashboard') loadDashboard();
+      if (tabName === 'orders') { loadSalesUsers(); loadOrders(); }
+      if (tabName === 'users') loadUsers();
+    }
+
+    // ========== 初始化 ==========
     async function init() {
       const user = Auth.getUser();
       document.getElementById('userName').textContent = user.full_name || user.email;
       document.getElementById('userRole').textContent = App.getRoleName(user.role);
-      await loadOrders();
+      await loadDashboard();  // 默认加载概览Tab
+    }
+
+    // ========== Dashboard 数据概览 ==========
+    async function loadDashboard() {
+      const stats = await API.getOrderStats();
+
+      // 更新统计卡片
+      document.querySelector('.stat-total .stat-number').textContent = stats.total;
+      document.querySelector('.stat-pending .stat-number').textContent = stats.by_status['调货中'] || 0;
+      document.querySelector('.stat-transit .stat-number').textContent = stats.by_status['路途中'] || 0;
+      document.querySelector('.stat-arrived .stat-number').textContent = stats.by_status['已到货'] || 0;
+      document.querySelector('.stat-completed .stat-number').textContent = stats.by_status['已完结'] || 0;
+      document.querySelector('.stat-users .stat-number').textContent = stats.by_sales.length;
+
+      // 业务员订单统计表格
+      const container = document.getElementById('salesStatsContainer');
+      if (!stats.by_sales || stats.by_sales.length === 0) {
+        App.showEmpty(container, '暂无业务员数据');
+        return;
+      }
+      let html = `
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr><th>姓名</th><th>邮箱</th><th>订单数量</th></tr>
+            </thead>
+            <tbody>`;
+      stats.by_sales.forEach(s => {
+        html += `<tr>
+          <td>${App.escapeHtml(s.full_name || '-')}</td>
+          <td>${App.escapeHtml(s.email)}</td>
+          <td><strong>${s.order_count}</strong></td>
+        </tr>`;
+      });
+      html += '</tbody></table></div>';
+      container.innerHTML = html;
+    }
+
+    // ========== 订单管理 ==========
+    async function loadSalesUsers() {
+      const { data, error } = await API.getSalesUsers();
+      const select = document.getElementById('salesId');
+      const filterSelect = document.getElementById('filterSales');
+
+      let options = '<option value="">请选择业务员</option>';
+      let filterOptions = '<option value="">全部业务员</option>';
+
+      if (data && data.length > 0) {
+        data.forEach(user => {
+          const name = user.full_name || user.email.split('@')[0];
+          options += `<option value="${user.id}">${name} (${user.email})</option>`;
+          filterOptions += `<option value="${user.id}">${name}</option>`;
+        });
+      } else {
+        options = '<option value="">暂无业务员（请先在「用户管理」中添加）</option>';
+      }
+
+      select.innerHTML = options;
+      filterSelect.innerHTML = filterOptions;
     }
 
     async function loadOrders() {
       const container = document.getElementById('ordersContainer');
       App.showLoading(container);
 
-      const { data, error } = await API.getOrders();
+      const filters = {};
+      const statusFilter = document.getElementById('filterStatus').value;
+      const salesFilter = document.getElementById('filterSales').value;
+      if (statusFilter) filters.order_status = statusFilter;
+      if (salesFilter) filters.sales_id = salesFilter;
+
+      const { data, error } = await API.getOrders(filters);
 
       if (error) {
         App.showError(container, '加载订单失败: ' + error.message);
@@ -85,7 +267,7 @@
       }
 
       if (!data || data.length === 0) {
-        App.showEmpty(container, '暂无订单');
+        App.showEmpty(container, '暂无订单数据');
         return;
       }
 
@@ -99,97 +281,227 @@
           <table>
             <thead>
               <tr>
-                <th>发票号</th>
-                <th>产品型号</th>
-                <th>数量</th>
-                <th>状态</th>
-                <th>仓库备注</th>
-                <th>业务员备注</th>
-                <th>业务员</th>
-                <th>创建时间</th>
-                <th>操作</th>
+                <th>发票号</th><th>产品型号</th><th>数量</th><th>状态</th>
+                <th>仓库备注</th><th>业务员备注</th><th>业务员</th><th>创建时间</th><th>操作</th>
               </tr>
             </thead>
-            <tbody>
-      `;
+            <tbody>`;
 
       orders.forEach(order => {
-        const statusClass = App.getStatusClass(order.order_status);
-        html += `
-          <tr data-id="${order.id}">
-            <td>${App.escapeHtml(order.invoice_no)}</td>
-            <td>${App.escapeHtml(order.product_model)}</td>
-            <td>${order.quantity}</td>
-            <td>
-              <select class="form-control status-select" onchange="updateStatus(${order.id}, this.value)" style="width:120px;">
-                ${CONFIG.ORDER_STATUSES.map(s => `<option value="${s}" ${s === order.order_status ? 'selected' : ''}>${s}</option>`).join('')}
-              </select>
-            </td>
-            <td>
-              <input type="text" class="notes-input warehouse-notes" value="${App.escapeHtml(order.warehouse_notes || '')}"
-                onblur="updateWarehouseNotes(${order.id}, this.value)" placeholder="仓库备注">
-            </td>
-            <td>
-              <input type="text" class="notes-input sales-notes" value="${App.escapeHtml(order.sales_notes || '')}"
-                onblur="updateSalesNotes(${order.id}, this.value)" placeholder="业务员备注">
-            </td>
-            <td>${App.escapeHtml(order.user_profiles?.full_name || '-')}</td>
-            <td>${App.formatDate(order.created_at)}</td>
-            <td>
-              <button class="btn btn-danger btn-sm" onclick="deleteOrder(${order.id})">删除</button>
-            </td>
-          </tr>
-        `;
+        html += `<tr data-id="${order.id}">
+          <td>${App.escapeHtml(order.invoice_no)}</td>
+          <td>${App.escapeHtml(order.product_model)}</td>
+          <td>${order.quantity}</td>
+          <td>
+            <select class="form-control status-select" onchange="updateStatus(${order.id}, this.value)" style="width:120px;">
+              ${CONFIG.ORDER_STATUSES.map(s =>
+                `<option value="${s}" ${s === order.order_status ? 'selected' : ''}>${s}</option>`
+              ).join('')}
+            </select>
+          </td>
+          <td>
+            <input type="text" class="notes-input warehouse-notes"
+              value="${App.escapeHtml(order.warehouse_notes || '')}"
+              onblur="updateWarehouseNotes(${order.id}, this.value)" placeholder="仓库备注">
+          </td>
+          <td>
+            <input type="text" class="notes-input sales-notes"
+              value="${App.escapeHtml(order.sales_notes || '')}"
+              onblur="updateSalesNotes(${order.id}, this.value)" placeholder="业务员备注">
+          </td>
+          <td>${App.escapeHtml(order.user_profiles?.full_name || '-')}</td>
+          <td>${App.formatDate(order.created_at)}</td>
+          <td>
+            <button class="btn btn-danger btn-sm" onclick="deleteOrder(${order.id})">删除</button>
+          </td>
+        </tr>`;
       });
 
       html += '</tbody></table></div>';
       container.innerHTML = html;
     }
 
+    // 新增订单
     document.getElementById('addOrderForm').addEventListener('submit', async (e) => {
       e.preventDefault();
       const invoiceNo = document.getElementById('invoiceNo').value.trim();
       const productModel = document.getElementById('productModel').value.trim();
       const quantity = parseInt(document.getElementById('quantity').value);
+      const salesId = document.getElementById('salesId').value;
 
-      if (!invoiceNo || !productModel || !quantity) {
+      if (!invoiceNo || !productModel || !quantity || !salesId) {
         showToast('请填写所有必填字段', 'error');
         return;
       }
 
       const btn = e.target.querySelector('button[type="submit"]');
-      btn.disabled = true;
-      btn.textContent = '添加中...';
+      setBtnLoading(btn, true, '添加中...');
 
-      const { data, error } = await API.createOrder({ invoice_no: invoiceNo, product_model: productModel, quantity });
+      const { error } = await API.createOrder({ invoice_no: invoiceNo, product_model: productModel, quantity, sales_id: salesId });
 
-      btn.disabled = false;
-      btn.textContent = '添加订单';
+      setBtnLoading(btn, false, '添加订单');
 
       if (error) {
         showToast('添加失败: ' + error.message, 'error');
         return;
       }
 
-      showToast('订单添加成功', 'success');
+      showToast('订单添加成功！', 'success');
       e.target.reset();
       await loadOrders();
     });
 
+    // ========== 用户管理 ==========
+    async function loadUsers() {
+      const container = document.getElementById('usersContainer');
+      App.showLoading(container);
+
+      const { data, error } = await API.getAllUsers();
+
+      if (error) {
+        App.showError(container, '加载用户失败: ' + error.message);
+        return;
+      }
+
+      if (!data || data.length === 0) {
+        App.showEmpty(container, '暂无用户');
+        return;
+      }
+
+      renderUsers(data);
+    }
+
+    function renderUsers(users) {
+      const container = document.getElementById('usersContainer');
+      let html = `
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>邮箱</th><th>姓名</th><th>角色</th><th>创建时间</th><th>操作</th>
+              </tr>
+            </thead>
+            <tbody>`;
+
+      users.forEach(user => {
+        html += `<tr data-id="${user.id}">
+          <td>${App.escapeHtml(user.email)}</td>
+          <td>
+            <input type="text" class="inline-edit" id="name-${user.id}"
+              value="${App.escapeHtml(user.full_name || '')}"
+              placeholder="未设置姓名" style="width:120px;padding:4px 8px;border:1px solid #ddd;border-radius:4px;">
+          </td>
+          <td>
+            <select class="form-control role-select" id="role-${user.id}" style="width:110px;"
+              onchange="changeUserRole('${user.id}', this.value)">
+              ${['admin','warehouse','sales'].map(r =>
+                `<option value="${r}" ${r === user.role ? 'selected' : ''}>${App.getRoleName(r)}</option>`
+              ).join('')}
+            </select>
+          </td>
+          <td>${App.formatDate(user.created_at)}</td>
+          <td>
+            <button class="btn btn-sm btn-primary" style="font-size:11px;padding:4px 10px;" onclick="saveUserInfo('${user.id}')">保存修改</button>
+          </td>
+        </tr>`;
+      });
+
+      html += '</tbody></table></div>';
+      container.innerHTML = html;
+    }
+
+    // 创建用户
+    document.getElementById('createUserForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('newUserEmail').value.trim();
+      const fullName = document.getElementById('newUserName').value.trim();
+      const role = document.getElementById('newUserRole').value;
+      const password = document.getElementById('newUserPassword').value;
+
+      if (!email || !password) {
+        showToast('请填写邮箱和密码', 'error');
+        return;
+      }
+
+      const btn = e.target.querySelector('button[type="submit"]');
+      setBtnLoading(btn, true, '创建中...');
+
+      try {
+        // Step 1: 通过 Auth Admin API 创建认证用户
+        const resp = await fetch(`${CONFIG.SUPABASE_URL}/auth/v1/admin/users`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${CONFIG.SERVICE_ROLE_KEY}`,
+            'apikey': CONFIG.SUPABASE_ANON_KEY
+          },
+          body: JSON.stringify({ email, password, email_confirm: true })
+        });
+        const result = await resp.json();
+
+        if (result.id) {
+          // Step 2: 创建成功，profile会由触发器自动生成，但需要更新角色和姓名
+          if (role !== 'sales' || fullName) {
+            const updates = { role };
+            if (fullName) updates.full_name = fullName;
+            setTimeout(async () => {
+              await SUPABASE.from('user_profiles').update(updates).eq('id', result.id);
+            }, 500); // 等待触发器执行完
+          }
+          showToast(`用户 ${email} 创建成功！（默认密码：${password}）`, 'success');
+          e.target.reset();
+          document.getElementById('newUserPassword').value = '123456';
+          await loadUsers();
+        } else {
+          showToast('创建失败: ' + (result.msg || result.error_description || JSON.stringify(result)), 'error');
+        }
+      } catch (err) {
+        showToast('创建异常: ' + err.message, 'error');
+      }
+
+      setBtnLoading(btn, false, '创建用户');
+    });
+
+    // 保存用户信息修改
+    async function saveUserInfo(userId) {
+      const nameInput = document.getElementById('name-' + userId);
+      const roleSelect = document.getElementById('role-' + userId);
+      const newFullName = nameInput.value.trim();
+      const newRole = roleSelect.value;
+
+      const { error } = await API.updateUserProfile(userId, {
+        full_name: newFullName || null,
+        role: newRole
+      });
+
+      if (error) {
+        showToast('保存失败: ' + error.message, 'error');
+      } else {
+        showToast('用户信息已更新', 'success');
+        await loadUsers(); // 刷新以同步显示
+      }
+    }
+
+    // 角色切换时确认
+    async function changeUserRole(userId, newRole) {
+      // 不立即保存，等用户点保存按钮
+      console.log('[Admin] 用户', userId, '角色待改为:', newRole);
+    }
+
+    // ========== 订单操作 ==========
     async function updateStatus(orderId, status) {
       const { error } = await API.updateOrder(orderId, { order_status: status });
       if (error) {
         showToast('更新状态失败: ' + error.message, 'error');
       } else {
-        showToast('状态已更新', 'success');
+        showToast('状态已更新 → ' + status, 'success');
+        await loadOrders();
       }
     }
 
     async function updateWarehouseNotes(orderId, notes) {
       const { error } = await API.updateOrder(orderId, { warehouse_notes: notes });
-      if (error) {
-        showToast('更新备注失败: ' + error.message, 'error');
-      }
+      if (error) showToast('更新备注失败: ' + error.message, 'error');
     }
 
     async function updateSalesNotes(orderId, notes) {
@@ -197,13 +509,12 @@
       if (error) {
         showToast('更新备注失败: ' + error.message, 'error');
       } else {
-        showToast('备注已更新', 'success');
+        showToast('业务员备注已更新', 'success');
       }
     }
 
     async function deleteOrder(orderId) {
-      if (!confirm('确定要删除此订单吗？')) return;
-
+      if (!confirm('确定要删除此订单吗？此操作不可恢复！')) return;
       const { error } = await API.deleteOrder(orderId);
       if (error) {
         showToast('删除失败: ' + error.message, 'error');
@@ -211,6 +522,12 @@
         showToast('订单已删除', 'success');
         await loadOrders();
       }
+    }
+
+    // ========== 工具函数 ==========
+    function setBtnLoading(btn, loading, text) {
+      btn.disabled = loading;
+      btn.textContent = text;
     }
   </script>
 </body>

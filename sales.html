@@ -24,7 +24,7 @@
     <div class="card">
       <h3 class="card-title">🔍 查询我的订单</h3>
       <div class="search-box">
-        <input type="text" id="searchInvoice" class="form-control" placeholder="请输入发票号进行查询">
+        <input type="text" id="searchInvoice" class="form-control" placeholder="输入发票号查询...">
         <button class="btn btn-primary" onclick="searchOrder()">查询</button>
       </div>
       <div id="searchResult" style="display:none;"></div>
@@ -32,6 +32,7 @@
 
     <div class="card">
       <h3 class="card-title">📋 我的订单列表</h3>
+      <p style="font-size:13px;color:#888;margin-bottom:12px;">仅显示您名下的所有订单（按创建时间倒序）</p>
       <div id="ordersContainer">
         <div class="loading">加载中...</div>
       </div>
@@ -39,7 +40,7 @@
   </main>
 
   <footer class="footer">
-    © 2024 订单管理系统
+    © <span id="footerYear"></span> 订单管理系统
   </footer>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -48,8 +49,10 @@
   <script src="js/api.js"></script>
   <script src="js/app.js"></script>
   <script>
+    document.getElementById('footerYear').textContent = new Date().getFullYear();
+
     if (!Auth.requireRole([CONFIG.ROLES.SALES])) {
-      // Already redirected
+      // 已重定向
     } else {
       init();
     }
@@ -74,7 +77,7 @@
       }
 
       if (!data || data.length === 0) {
-        App.showEmpty(container, '您还没有创建过订单');
+        App.showEmpty(container, '您还没有订单记录');
         return;
       }
 
@@ -88,29 +91,22 @@
           <table>
             <thead>
               <tr>
-                <th>发票号</th>
-                <th>产品型号</th>
-                <th>数量</th>
-                <th>状态</th>
-                <th>仓库备注</th>
-                <th>创建时间</th>
+                <th>发票号</th><th>产品型号</th><th>数量</th>
+                <th>状态</th><th>仓库备注</th><th>创建时间</th>
               </tr>
             </thead>
-            <tbody>
-      `;
+            <tbody>`;
 
       orders.forEach(order => {
         const statusClass = App.getStatusClass(order.order_status);
-        html += `
-          <tr>
-            <td>${App.escapeHtml(order.invoice_no)}</td>
-            <td>${App.escapeHtml(order.product_model)}</td>
-            <td>${order.quantity}</td>
-            <td><span class="status-badge ${statusClass}">${order.order_status}</span></td>
-            <td>${App.escapeHtml(order.warehouse_notes || '-')}</td>
-            <td>${App.formatDate(order.created_at)}</td>
-          </tr>
-        `;
+        html += `<tr>
+          <td>${App.escapeHtml(order.invoice_no)}</td>
+          <td>${App.escapeHtml(order.product_model)}</td>
+          <td>${order.quantity}</td>
+          <td><span class="status-badge ${statusClass}">${order.order_status}</span></td>
+          <td>${App.escapeHtml(order.warehouse_notes || '-')}</td>
+          <td>${App.formatDate(order.created_at)}</td>
+        </tr>`;
       });
 
       html += '</tbody></table></div>';
@@ -129,53 +125,48 @@
       const resultDiv = document.getElementById('searchResult');
 
       if (!invoiceNo) {
-        showToast('请输入发票号', 'error');
+        showToast('请先输入发票号', 'error');
         return;
       }
 
       resultDiv.style.display = 'block';
       resultDiv.innerHTML = '<div class="loading">查询中...</div>';
 
-      const user = Auth.getUser();
       const { data, error } = await API.getOrderByInvoice(invoiceNo);
 
       if (error || !data) {
-        resultDiv.innerHTML = `<div class="error">未找到发票号为 "${App.escapeHtml(invoiceNo)}" 的订单</div>`;
+        resultDiv.innerHTML = `<div class="error">未找到发票号为「${App.escapeHtml(invoiceNo)}」的订单</div>`;
         return;
       }
 
+      const user = Auth.getUser();
       if (data.sales_id !== user.id) {
-        resultDiv.innerHTML = `<div class="error">您只能查询本人创建的订单</div>`;
+        resultDiv.innerHTML = `<div class="error" style="padding:20px;">⚠️ 该订单不属于您，无法查看详情。</div>`;
         return;
       }
 
       const statusClass = App.getStatusClass(data.order_status);
       resultDiv.innerHTML = `
-        <div class="table-wrapper">
-          <table>
-            <thead>
-              <tr>
-                <th>发票号</th>
-                <th>产品型号</th>
-                <th>数量</th>
-                <th>状态</th>
-                <th>仓库备注</th>
-                <th>创建时间</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>${App.escapeHtml(data.invoice_no)}</td>
-                <td>${App.escapeHtml(data.product_model)}</td>
-                <td>${data.quantity}</td>
-                <td><span class="status-badge ${statusClass}">${data.order_status}</span></td>
-                <td>${App.escapeHtml(data.warehouse_notes || '-')}</td>
-                <td>${App.formatDate(data.created_at)}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      `;
+        <div style="margin-top:12px;padding:16px;background:#f0fff4;border-radius:8px;border:1px solid #c3e6cb;">
+          <strong>✅ 找到订单：</strong>
+          <div class="table-wrapper" style="margin-top:8px;">
+            <table>
+              <thead>
+                <tr><th>发票号</th><th>产品型号</th><th>数量</th><th>状态</th><th>仓库备注</th><th>创建时间</th></tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>${App.escapeHtml(data.invoice_no)}</td>
+                  <td>${App.escapeHtml(data.product_model)}</td>
+                  <td>${data.quantity}</td>
+                  <td><span class="status-badge ${statusClass}">${data.order_status}</span></td>
+                  <td>${App.escapeHtml(data.warehouse_notes || '-')}</td>
+                  <td>${App.formatDate(data.created_at)}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>`;
     }
   </script>
 </body>
