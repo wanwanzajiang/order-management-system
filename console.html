@@ -12,7 +12,7 @@
     .c-tab:hover:not(.active){background:rgba(255,255,255,0.15);color:#fff;}
     .c-card{background:#fff;border-radius:10px;padding:20px;margin-bottom:16px;box-shadow:0 1px 6px rgba(0,0,0,0.08);}
     .c-card h3{margin:0 0 14px;font-size:15px;display:flex;align-items:center;gap:8px;}
-    .stat-grid-c{display:grid;grid-template-repeat(auto-fill,minmax(140px,1fr));gap:12px;margin-bottom:18px;}
+    .stat-grid-c{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px;margin-bottom:18px;}
     .stat-box{background:linear-gradient(135deg,#f8f9ff,#eef1ff);border-radius:10px;padding:14px;text-align:center;border:1px solid #e0e5f0;}
     .stat-box .num{font-size:24px;font-weight:700;color:#333;}
     .stat-box .lbl{font-size:11px;color:#888;margin-top:2px;}
@@ -168,24 +168,27 @@
     async function loadOverview(){
       const c=document.getElementById('tab-overview');
       c.innerHTML=`<div class="stat-grid-c"><div class="stat-box"><div class="num" id="oTotal">-</div><div class="lbl">总订单</div></div><div class="stat-box"><div class="num" id="oUsers">-</div><div class="lbl">注册用户</div></div><div class="stat-box"><div class="num" id="oSp">-</div><div class="lbl">业务员</div></div><div class="stat-box"><div class="num" id="oActive">-</div><div class="lbl">活跃订单</div></div></div><div id="oDetail" class="c-card"><h3>📈 各状态分布</h3><p style="color:#999;">加载中...</p></div>`;
+      try{
       const stats=await API.getOrderStats();
-      document.getElementById('oTotal').textContent=stats.total;
-      document.getElementById('oActive').textContent=(stats.by_status['调货中']||0)+(stats.by_status['路途中']||0);
+      document.getElementById('oTotal').textContent=stats?.total??'-';
+      document.getElementById('oActive').textContent=((stats?.by_status?.['调货中']||0)+(stats?.by_status?.['路途中']||0))||'-';
       const users=await API.getAllUsers();
-      document.getElementById('oUsers').textContent=(users.data||[]).length;
+      document.getElementById('oUsers').textContent=(users?.data||[]).length;
       const spData=await API.getAllSalespeople(true);
-      document.getElementById('oSp').textContent=(spData.data||[]).filter(s=>s.is_active!==false).length;
+      document.getElementById('oSp').textContent=(spData?.data||[]).filter(s=>s.is_active!==false).length;
       let h='<div style="display:flex;gap:10px;flex-wrap:wrap;">';
-      ['调货中','路途中','已到货','已完结'].forEach(s=>{const n=stats.by_status[s]||0;const cl={'调货中':'#e67e22','路途中':'#3498db','已到货':'#27ae60','已完结':'#95a5a6'}[s];h+=`<div style="background:${cl}15;color:${cl};padding:12px 20px;border-radius:8px;text-align:center;min-width:100px;"><div style="font-size:22px;font-weight:700;">${n}</div><div style="font-size:11px;">${s}</div></div>`;});
+      ['调货中','路途中','已到货','已完结'].forEach(s=>{const n=stats?.by_status?.[s]||0;const cl={'调货中':'#e67e22','路途中':'#3498db','已到货':'#27ae60','已完结':'#95a5a6'}[s];h+=`<div style="background:${cl}15;color:${cl};padding:12px 20px;border-radius:8px;text-align:center;min-width:100px;"><div style="font-size:22px;font-weight:700;">${n}</div><div style="font-size:11px;">${s}</div></div>`;});
       h+='</div>';
       document.getElementById('oDetail').innerHTML=`<h3>📈 各状态分布</h3>${h}`;
       log('加载系统总览完成','s');
+      }catch(e){console.error('[Console] loadOverview error:',e);document.getElementById('oDetail').innerHTML='<h3>⚠️ 加载失败</h3><p style="color:#f87171;">数据加载异常，请刷新重试<br><small>'+String(e.message||e)+'</small></p>';log('总览加载失败: '+e,'e');}
     }
 
     // ======== Accounts ========
     async function loadAccounts(){
       const c=document.getElementById('tab-accounts');
       c.innerHTML='<div class="c-card"><h3>👤 全部账号</h3><p style="color:#999;">加载中...</p></div>';
+      try{
       const r=await API.getAllUsers();
       const users=r.data||[];
       let h=`<div class="c-card"><h3>👤 全部账号 (${users.length})</h3><table class="user-table"><tr><th>ID</th><th>邮箱</th><th>姓名</th><th>角色</th><th>创建时间</th><th>操作</th></tr>`;
@@ -202,6 +205,7 @@
       });
       h+='</table></div>';
       c.innerHTML=h;
+      }catch(e){console.error('[Console] loadAccounts error:',e);c.innerHTML='<div class="c-card"><h3>⚠️ 加载失败</h3><p style="color:#f87171;">账号列表加载异常: '+String(e.message||e)+'</p></div>';}
     }
 
     async function changeUserRole(uid,newRole){
@@ -215,10 +219,12 @@
     let allOrders=[];
     async function refreshOrderSelect(){
       const sel=document.getElementById('editOrderSel');
+      try{
       const r=await API.getOrders();
       allOrders=r.data||[];
       sel.innerHTML='<option value="">-- 选择订单 --</option>'+allOrders.map(o=>`<option value="${o.id}">${App.escapeHtml(o.invoice_no)} | ${o.salesperson_name||'-'} | ${o.order_date||'-'} | ${o.quantity||'-'}</option>`).join('');
       log(`加载了 ${allOrders.length} 个订单`,'i');
+      }catch(e){console.error('[Console] refreshOrderSelect error:',e);sel.innerHTML='<option value="">⚠️ 加载失败，请刷新</option>';}
     }
 
     async function loadOrderForEdit(oid){
@@ -354,6 +360,7 @@
     // ======== Salespeople ========
     async function loadSpManage(){
       const c=document.getElementById('tab-spManage');
+      try{
       const r=await API.getAllSalespeople(true);
       const list=r.data||[];
       c.innerHTML=`<div class="c-card"><h3>➕ 快速添加</h3><div class="form-row-c" style="margin-bottom:12px;"><input type="text" id="nsp_name" placeholder="姓名" style="flex:1;padding:7px 10px;border:1px solid #ddd;border-radius:6px;"><input type="text" id="nsp_code" placeholder="识别码(选填)" style="flex:1;padding:7px 10px;border:1px solid #ddd;border-radius:6px;"><button class="btn btn-primary btn-sm" onclick="quickAddSp()">添加</button></div></div>
@@ -363,9 +370,10 @@
         return `<tr><td>${App.escapeHtml(sp.name)}</td><td style="font-family:monospace;">${App.escapeHtml(sp.access_code||'-')}</td><td>${ac?'✅ 正常':'⛔ 停用'}</td><td>
           ${ac?`<button class="btn btn-xs" style="background:#fee;color:#c00;border:1px solid #fcc;" onclick="toggleSpStatus(${sp.id},false)">停用</button>`
             :`<button class="btn btn-xs" style="background:#efe;color:#080;border:1px solid #cfc;" onclick="toggleSpStatus(${sp.id},true)">恢复</button>`}
-          <button class="btn btn-xs" style="background:#eef;color:#04c;border:1px soliddde;" onclick="updateSpCode(${sp.id})">改码</button>
+          <button class="btn btn-xs" style="background:#eef;color:#04c;border:1px solid #dde;" onclick="updateSpCode(${sp.id})">改码</button>
         </td></tr>`;
       }).join('')+'</table></div>';
+      }catch(e){console.error('[Console] loadSpManage error:',e);c.innerHTML='<div class="c-card"><h3>⚠️ 加载失败</h3><p style="color:#f87171;">业务员列表加载异常: '+String(e.message||e)+'</p></div>';}
     }
 
     async function quickAddSp(){
