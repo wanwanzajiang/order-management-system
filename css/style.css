@@ -445,6 +445,47 @@ tr:hover {
   font-size: 12px;
 }
 
+/* ===== 仓库专用输入框 ===== */
+.ship-date {
+  border-color: #e07a5f !important;
+  background: #fff8f5;
+}
+
+.ship-date:focus {
+  outline: none;
+  border-color: #e07a5f !important;
+  box-shadow: 0 0 0 2px rgba(224, 122, 95, 0.15) !important;
+}
+
+.tracking-input {
+  border-color: #3498db !important;
+  background: #f0f8ff;
+}
+
+.tracking-input:focus {
+  outline: none;
+  border-color: #3498db !important;
+  box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.15) !important;
+}
+
+/* ===== 状态徽章 ===== */
+.status-badge {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 10px;
+  font-size: 12px;
+}
+
+/* ===== Toast通知 ===== */
+#toastBox {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%) translateY(-100px);
+  z-index: 9999;
+  transition: all 0.3s ease;
+}
+
 @media (max-width: 768px) {
   .header .container {
     flex-direction: column;

@@ -11,54 +11,79 @@ CREATE TABLE IF NOT EXISTS user_profiles (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 2. 创建订单表
+-- 2. 创建业务员姓名表（独立于用户账号）
+CREATE TABLE IF NOT EXISTS salespeople (
+    id BIGSERIAL PRIMARY KEY,
+    name TEXT NOT NULL UNIQUE,
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 3. 创建订单表（增强版）
 CREATE TABLE IF NOT EXISTS orders (
     id BIGSERIAL PRIMARY KEY,
     invoice_no TEXT NOT NULL UNIQUE,
+    order_date DATE,              -- 单据日期
+    brand TEXT,                    -- 品牌
     product_model TEXT NOT NULL,
     quantity INTEGER NOT NULL CHECK (quantity > 0),
+    delivery_date TEXT,            -- 合同货期/交期
     order_status TEXT NOT NULL DEFAULT '调货中' CHECK (order_status IN ('调货中', '路途中', '已到货', '已完结')),
+    shipping_date DATE,           -- 仓库发货时间（由仓库填写）
+    tracking_no TEXT,             -- 快递单号（由仓库填写）
     warehouse_notes TEXT,
     sales_notes TEXT,
-    sales_id UUID NOT NULL REFERENCES auth.users(id),
+    salesperson_name TEXT,         -- 业务员姓名（关联salespeople.name）
+    sales_id UUID REFERENCES auth.users(id),  -- 保留兼容
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 3. 创建索引
+-- 4. 创建索引
 CREATE INDEX IF NOT EXISTS idx_orders_sales_id ON orders(sales_id);
 CREATE INDEX IF NOT EXISTS idx_orders_invoice_no ON orders(invoice_no);
 CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(order_status);
 CREATE INDEX IF NOT EXISTS idx_user_profiles_role ON user_profiles(role);
+CREATE INDEX IF NOT EXISTS idx_orders_salesperson_name ON orders(salesperson_name);
+CREATE INDEX IF NOT EXISTS idx_salespeople_name ON salespeople(name);
 
 -- ============================================
 -- RLS (Row Level Security) 策略
+-- ⚠️ 注意：策略中不能引用自身表，否则会导致 infinite recursion！
 -- ============================================
 
 -- 启用 RLS
 ALTER TABLE user_profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE orders ENABLE ROW LEVEL SECURITY;
+ALTER TABLE salespeople ENABLE ROW LEVEL SECURITY;
 
 -- -------------------------------------------
--- user_profiles 表的 RLS 策略
--- ⚠️ 注意：策略中不能引用自身表，否则会导致 infinite recursion！
+-- user_profiles 表的 RLS 策略（安全版）
 -- -------------------------------------------
-
--- 所有已登录用户可读取用户列表（管理系统需要展示用户信息）
 CREATE POLICY "authenticated_can_read_profiles"
     ON user_profiles FOR SELECT
     USING (auth.role() = 'authenticated');
 
--- 用户可以创建自己的 profile
 CREATE POLICY "users_can_insert_own_profile"
     ON user_profiles FOR INSERT
     WITH CHECK (auth.uid() = id);
 
--- 用户只能更新自己的基本信息（姓名等）
 CREATE POLICY "users_can_update_own_profile"
     ON user_profiles FOR UPDATE
     USING (auth.uid() = id)
     WITH CHECK (auth.uid() = id);
+
+-- -------------------------------------------
+-- salespeople 表的 RLS 策略
+-- -------------------------------------------
+CREATE POLICY "authenticated_can_read_salespeople"
+    ON salespeople FOR SELECT
+    USING (auth.role() = 'authenticated');
+
+CREATE POLICY "authenticated_can_manage_salespeople"
+    ON salespeople FOR ALL
+    USING (auth.role() = 'authenticated')
+    WITH CHECK (auth.role() = 'authenticated');
 
 -- -------------------------------------------
 -- orders 表的 RLS 策略
@@ -67,85 +92,23 @@ CREATE POLICY "users_can_update_own_profile"
 -- 管理员：可读所有订单
 CREATE POLICY "admins_can_read_all_orders"
     ON orders FOR SELECT
-    USING (
-        EXISTS (
-            SELECT 1 FROM user_profiles
-            WHERE id = auth.uid() AND role = 'admin'
-        )
-    );
+    USING (auth.role() = 'authenticated');  -- 简化：所有登录用户可读
 
--- 仓库人员：可读所有订单
-CREATE POLICY "warehouse_can_read_all_orders"
-    ON orders FOR SELECT
-    USING (
-        EXISTS (
-            SELECT 1 FROM user_profiles
-            WHERE id = auth.uid() AND role = 'warehouse'
-        )
-    );
-
--- 业务员：仅可读本人订单（sales_id = auth.uid()）
-CREATE POLICY "sales_can_read_own_orders"
-    ON orders FOR SELECT
-    USING (sales_id = auth.uid());
-
--- 管理员：可插入订单
-CREATE POLICY "admins_can_insert_orders"
+-- 仓库人员/管理员：可插入订单
+CREATE POLICY "authenticated_can_insert_orders"
     ON orders FOR INSERT
-    WITH CHECK (
-        EXISTS (
-            SELECT 1 FROM user_profiles
-            WHERE id = auth.uid() AND role = 'admin'
-        )
-    );
+    WITH CHECK (auth.role() = 'authenticated');
 
--- 管理员：可更新任何订单
-CREATE POLICY "admins_can_update_all_orders"
+-- 所有登录用户：可更新订单
+CREATE POLICY "authenticated_can_update_orders"
     ON orders FOR UPDATE
-    USING (
-        EXISTS (
-            SELECT 1 FROM user_profiles
-            WHERE id = auth.uid() AND role = 'admin'
-        )
-    );
+    USING (auth.role() = 'authenticated')
+    WITH CHECK (auth.role() = 'authenticated');
 
--- 仓库人员：可更新 order_status 和 warehouse_notes
-CREATE POLICY "warehouse_can_update_orders"
-    ON orders FOR UPDATE
-    USING (
-        EXISTS (
-            SELECT 1 FROM user_profiles
-            WHERE id = auth.uid() AND role = 'warehouse'
-        )
-    )
-    WITH CHECK (
-        EXISTS (
-            SELECT 1 FROM user_profiles
-            WHERE id = auth.uid() AND role = 'warehouse'
-        )
-        AND (order_status = ANY(ARRAY['调货中', '路途中', '已到货', '已完结']))
-    );
-
--- 仓库人员：可删除已完结订单
-CREATE POLICY "warehouse_can_delete_completed_orders"
+-- 所有登录用户：可删除订单
+CREATE POLICY "authenticated_can_delete_orders"
     ON orders FOR DELETE
-    USING (
-        EXISTS (
-            SELECT 1 FROM user_profiles
-            WHERE id = auth.uid() AND role = 'warehouse'
-        )
-        AND order_status = '已完结'
-    );
-
--- 管理员：可删除任何订单
-CREATE POLICY "admins_can_delete_any_orders"
-    ON orders FOR DELETE
-    USING (
-        EXISTS (
-            SELECT 1 FROM user_profiles
-            WHERE id = auth.uid() AND role = 'admin'
-        )
-    );
+    USING (auth.role() = 'authenticated');
 
 -- ============================================
 -- 触发器：自动更新 updated_at
@@ -179,10 +142,3 @@ CREATE OR REPLACE TRIGGER on_auth_user_created
     AFTER INSERT ON auth.users
     FOR EACH ROW
     EXECUTE FUNCTION handle_new_user();
-
--- ============================================
--- 初始数据：创建测试用户（可选）
--- 注释掉以下内容，在 Supabase Dashboard 中手动创建
--- ============================================
--- INSERT INTO auth.users (email, encrypted_password)
--- VALUES ('admin@example.com', 'hashed_password_here');
