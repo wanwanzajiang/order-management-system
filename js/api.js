@@ -23,13 +23,17 @@ const API = {
     return { data, error };
   },
 
-  async addSalesperson(name) {
-    const { data, error } = await SUPABASE
+  async addSalesperson(spData) {
+    // 兼容旧调用方式：传字符串(name)或对象({name, access_code, ...})
+    const data = typeof spData === 'string'
+      ? { name: spData.trim(), is_active: true }
+      : { ...spData, is_active: spData.is_active !== false };
+    const { data: result, error } = await SUPABASE
       .from('salespeople')
-      .insert({ name: name.trim(), is_active: true })
+      .insert(data)
       .select()
       .single();
-    return { data, error };
+    return { data: result, error };
   },
 
   async updateSalesperson(id, updates) {

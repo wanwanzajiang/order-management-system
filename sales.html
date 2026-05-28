@@ -5,6 +5,45 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>订单管理 - 业务员</title>
   <link rel="stylesheet" href="css/style.css">
+  <style>
+    /* 识别码验证弹窗 */
+    .modal-overlay {
+      display:flex;align-items:center;justify-content:center;
+      position:fixed;top:0;left:0;right:0;bottom:0;
+      background:rgba(0,0,0,0.5);z-index:9999;
+    }
+    .modal-box {
+      background:#fff;border-radius:14px;padding:28px;max-width:400px;width:90%;
+      box-shadow:0 10px 40px rgba(0,0,0,0.2);text-align:center;
+    }
+    .modal-box h3 { margin:0 0 6px 0; font-size:18px; color:#333; }
+    .modal-box p { margin:0 0 20px 0; font-size:13px; color:#888; }
+    .modal-box input {
+      width:100%;padding:12px 16px;font-size:18px;text-align:center;
+      letter-spacing:4px;font-weight:600;border:2px solid #667eea;
+      border-radius:10px;margin-bottom:16px;outline:none;
+      font-family:'Courier New',monospace;
+    }
+    .modal-box input:focus { border-color:#4a55c4; box-shadow:0 0 0 3px rgba(102,126,234,0.15); }
+    .modal-error { color:#e24b4a; font-size:12px; margin-bottom:12px; min-height:18px; }
+
+    /* 当前身份栏 */
+    .identity-bar {
+      background:linear-gradient(135deg,#eef1ff 0%,#f0f4ff 100%);
+      border-radius:8px;padding:10px 16px;margin-bottom:16px;
+      display:flex;align-items:center;gap:12px;font-size:13px;
+    }
+    .identity-bar .sp-name { font-weight:600;color:#1a56db; font-size:15px; }
+    .identity-bar .sp-code { font-family:monospace;background:#fff;padding:2px 8px;border-radius:4px;color:#667eea;font-size:11px; }
+
+    /* 产品明细展示 */
+    .product-cell { max-width:260px; }
+    .product-item { padding:3px 0; font-size:11px; }
+    .product-item + .product-item { border-top:1px dotted #eee; }
+    .p-tag { background:#e8f0fe;color:#1a56db;padding:1px 5px;border-radius:3px;margin-right:3px;font-size:10px; }
+    .p-qty { color:#e67e22;font-weight:500; }
+    .p-delivery { color:#888;font-size:10px; }
+  </style>
 </head>
 <body>
   <header class="header">
@@ -21,6 +60,19 @@
   </header>
 
   <main class="container">
+    <!-- 身份信息栏 -->
+    <div class="identity-bar" id="identityBar" style="display:none;">
+      <span style="font-size:18px;">👤</span>
+      <div>
+        <span>当前身份：</span>
+        <span class="sp-name" id="currentSpName"></span>
+        <span class="sp-code" id="currentSpCode"></span>
+      </div>
+      <div style="margin-left:auto;">
+        <button class="btn btn-sm" onclick="switchSalesperson()" style="font-size:11px;padding:4px 10px;background:#fff;border:1px solid #ddd;">切换身份</button>
+      </div>
+    </div>
+
     <!-- 查询区域 -->
     <div class="card" style="border-left:4px solid #667eea;">
       <h3 class="card-title">🔍 查询我的订单</h3>
@@ -28,13 +80,10 @@
       <div class="filter-bar" style="margin-bottom:0;">
         <label style="font-weight:500;color:#555;">按发票号：</label>
         <input type="text" id="searchInvoice" class="form-control" placeholder="输入发票号搜索" style="width:200px;">
-        <label style="font-weight:500;color:#555;margin-left:12px;">按姓名：</label>
-        <select id="searchSpName" class="form-control" style="width:auto;min-width:120px;">
-          <option value="">全部业务员</option>
-        </select>
         <label style="font-weight:500;color:#555;margin-left:12px;">状态：</label>
         <select id="searchStatus" class="form-control" style="width:auto;min-width:120px;">
-          <option value="">全部</option>
+          <option value="">全部状态</option>
+          <option value="__empty__">- 待填写 -</option>
           <option value="调货中">调货中</option>
           <option value="路途中">路途中</option>
           <option value="已到货">已到货</option>
@@ -43,6 +92,8 @@
         <button class="btn btn-primary btn-sm" onclick="searchOrders()" style="margin-left:auto;">🔍 搜索</button>
         <button class="btn btn-secondary btn-sm" onclick="resetSearch()">重置</button>
       </div>
+
+      <p style="font-size:12px;color:#aaa;margin-top:8px;">💡 只显示当前身份（<strong id="hintSpName"></strong>）的订单数据，其他业务员的订单不可见。</p>
     </div>
 
     <!-- 结果区域 -->
@@ -53,6 +104,17 @@
     © <span id="footerYear"></span> 订单管理系统
   </footer>
 
+  <!-- 识别码验证弹窗 -->
+  <div class="modal-overlay" id="codeModal" style="display:none;">
+    <div class="modal-box">
+      <h3>🔐 身份确认</h3>
+      <p>请输入您的<strong>业务员识别码</strong>以确认身份</p>
+      <input type="text" id="codeInput" autocomplete="off" placeholder="例如 SP001" maxlength="20">
+      <div class="modal-error" id="codeError"></div>
+      <button class="btn btn-primary" onclick="verifyCode()" style="width:100%;padding:12px;font-size:15px;">确认进入</button>
+    </div>
+  </div>
+
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="js/config.js"></script>
   <script src="js/auth.js"></script>
@@ -60,6 +122,9 @@
   <script src="js/app.js"></script>
   <script>
     document.getElementById('footerYear').textContent = new Date().getFullYear();
+
+    // 当前绑定的业务员信息（存在 sessionStorage 中）
+    let currentSp = null;
 
     if (!Auth.requireRole([CONFIG.ROLES.SALES, CONFIG.ROLES.ADMIN, CONFIG.ROLES.WAREHOUSE])) {
       // 已重定向
@@ -72,32 +137,111 @@
       document.getElementById('userName').textContent = user.full_name || user.email;
       document.getElementById('userRole').textContent = App.getRoleName(user.role);
 
-      await loadSalespeopleOptions();
-      showWelcome();
-    }
+      // 尝试从 session 恢复
+      const savedSp = sessionStorage.getItem('current_salesperson');
+      if (savedSp) {
+        try { currentSp = JSON.parse(savedSp); } catch(e) {}
+      }
 
-    async function loadSalespeopleOptions() {
-      const { data } = await API.getSalespeople();
-      const sel = document.getElementById('searchSpName');
-      if (data && data.length > 0) {
-        data.forEach(sp => {
-          sel.innerHTML += `<option value="${App.escapeHtml(sp.name)}">${App.escapeHtml(sp.name)}</option>`;
-        });
+      if (currentSp && currentSp.name) {
+        showIdentityBar();
+        showWelcome();
+      } else {
+        showModal();
       }
     }
 
+    // ========== 识别码验证 ==========
+    function showModal() {
+      document.getElementById('codeModal').style.display = 'flex';
+      document.getElementById('codeInput').value = '';
+      document.getElementById('codeError').textContent = '';
+      setTimeout(() => document.getElementById('codeInput').focus(), 300);
+    }
+
+    function hideModal() {
+      document.getElementById('codeModal').style.display = 'none';
+    }
+
+    // 回车键提交
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter' && document.getElementById('codeModal').style.display === 'flex') {
+        verifyCode();
+      }
+    });
+
+    async function verifyCode() {
+      const code = document.getElementById('codeInput').value.trim().toUpperCase();
+      const errEl = document.getElementById('codeError');
+
+      if (!code) {
+        errEl.textContent = '请输入识别码';
+        return;
+      }
+
+      // 查询识别码对应的业务员（包含已停用的也要能查到）
+      const { data, error } = await SUPABASE
+        .from('salespeople')
+        .select('*')
+        .eq('access_code', code)
+        .maybeSingle();
+
+      if (error || !data) {
+        errEl.textContent = '❌ 识别码无效，请检查后重新输入';
+        return;
+      }
+
+      if (data.is_active === false) {
+        errEl.textContent = '⛔ 该业务员已被停用，请联系管理员';
+        return;
+      }
+
+      // 验证通过！绑定身份
+      currentSp = { id: data.id, name: data.name, access_code: data.access_code };
+      sessionStorage.setItem('current_salesperson', JSON.stringify(currentSp));
+
+      hideModal();
+      showIdentityBar();
+      showToast(`✅ 欢迎，${currentSp.name}！`, 'success');
+      showWelcome();
+    }
+
+    function switchSalesperson() {
+      currentSp = null;
+      sessionStorage.removeItem('current_salesperson');
+      document.getElementById('identityBar').style.display = 'none';
+      document.getElementById('resultContainer').innerHTML = '';
+      showModal();
+    }
+
+    function showIdentityBar() {
+      if (!currentSp) return;
+      document.getElementById('identityBar').style.display = 'flex';
+      document.getElementById('currentSpName').textContent = currentSp.name;
+      document.getElementById('currentSpCode').textContent = currentSp.access_code;
+      document.getElementById('hintSpName').textContent = currentSp.name;
+    }
+
+    // ========== 搜索（只查自己的订单） ==========
     function showWelcome() {
       const container = document.getElementById('resultContainer');
+      const spName = currentSp ? currentSp.name : '';
       container.innerHTML = `
         <div class="card" style="margin-top:20px;text-align:center;padding:40px 20px;background:#f8f9ff;border-radius:10px;border:2px dashed #ccc;">
           <p style="font-size:40px;margin-bottom:16px;">📋</p>
-          <h3 style="color:#555;margin-bottom:8px;">输入条件查询订单</h3>
-          <p style="color:#999;font-size:14px;">可以按发票号、业务员姓名、订单状态筛选</p>
-          <p style="color:#bbb;font-size:12px;margin-top:12px;">💡 多个条件可组合使用</p>
+          <h3 style="color:#555;margin-bottom:8px;">查询「${App.escapeHtml(spName)}」的订单</h3>
+          <p style="color:#999;font-size:14px;">可以按发票号、订单状态筛选</p>
+          <p style="color:#bbb;font-size:12px;margin-top:12px;">💡 数据隔离：只能看到自己的订单</p>
         </div>`;
     }
 
     async function searchOrders() {
+      // 必须先验证身份
+      if (!currentSp) {
+        showModal();
+        return;
+      }
+
       const container = document.getElementById('resultContainer');
       App.showLoading(container);
 
@@ -106,13 +250,18 @@
         .select('*')
         .order('created_at', { ascending: false });
 
+      // 核心：强制过滤只返回当前业务员的订单
+      query = query.eq('salesperson_name', currentSp.name);
+
       const invoiceNo = document.getElementById('searchInvoice').value.trim();
-      const spName = document.getElementById('searchSpName').value;
       const status = document.getElementById('searchStatus').value;
 
       if (invoiceNo) query = query.ilike('invoice_no', `%${invoiceNo}%`);
-      if (spName) query = query.eq('salesperson_name', spName);
-      if (status) query = query.eq('order_status', status);
+      if (status === '__empty__') {
+        query = query.is('order_status', null);
+      } else if (status) {
+        query = query.eq('order_status', status);
+      }
 
       const { data, error } = await query;
 
@@ -147,7 +296,7 @@
             <span style="font-size:15px;">📊 找到 <strong style="color:#667eea;font-size:18px;">${orders.length}</strong> 条订单</span>
             <span style="font-size:15px;">📦 总数量：<strong style="color:#e67e22;font-size:18px;">${totalQty}</strong></span>
             ${Object.entries(statusCount).map(([s, c]) =>
-              `<span style="font-size:13px;color:#888;">${s}: <strong>${c}</strong></span>`
+              `<span style="font-size:13px;color:#888;">${s || '(待填写)'}: <strong>${c}</strong></span>`
             ).join('')}
           </div>
 
@@ -155,15 +304,18 @@
             <table>
               <thead>
                 <tr>
-                  <th>发票号</th><th>单据日期</th><th>品牌</th><th>型号</th>
-                  <th>数量</th><th>交期</th><th>业务员</th>
-                  <th>状态</th><th>发货时间</th><th>快递单号</th>
+                  <th>发票号</th><th>单据日期</th><th style="min-width:200px;">产品明细</th>
+                  <th>数量</th><th>状态</th>
+                  <th>发货时间</th><th>快递单号</th>
                   <th>仓库备注</th><th>业务备注</th><th>创建时间</th>
                 </tr>
               </thead>
               <tbody>`;
 
       orders.forEach(order => {
+        // 解析产品明细
+        const productsHtml = renderProductCell(order.product_model);
+
         const statusBadgeColor = {
           '调货中': '#e67e22',
           '路途中': '#3498db',
@@ -174,16 +326,13 @@
         html += `<tr>
           <td><strong>${App.escapeHtml(order.invoice_no)}</strong></td>
           <td>${order.order_date || '-'}</td>
-          <td>${App.escapeHtml(order.brand || '-')}</td>
-          <td>${App.escapeHtml(order.product_model)}</td>
-          <td><strong>${order.quantity}</strong></td>
-          <td>${order.delivery_date || '-'}</td>
-          <td>${App.escapeHtml(order.salesperson_name || '-')}</td>
+          <td class="product-cell">${productsHtml}</td>
+          <td><strong>${order.quantity || '-'}</strong></td>
           <td>
             <span style="
               display:inline-block;padding:2px 10px;border-radius:10px;
               font-size:12px;color:white;background:${statusBadgeColor};">
-              ${order.order_status}
+              ${order.order_status || '<span style="background:#ccc;">待填写</span>'}
             </span>
           </td>
           <td>${order.shipping_date || '<span style="color:#ccc;font-size:11px;">待填写</span>'}</td>
@@ -200,9 +349,33 @@
       container.innerHTML = html;
     }
 
+    // 产品明细渲染（兼容新旧格式）
+    function renderProductCell(productModel) {
+      if (!productModel) return '<span style="color:#ccc;">-</span>';
+
+      let products = null;
+      if (typeof productModel === 'string' && productModel.startsWith('[')) {
+        try { products = JSON.parse(productModel); } catch(e) {}
+      }
+
+      if (products && Array.isArray(products) && products.length > 0) {
+        let html = '<div>';
+        products.forEach((p, i) => {
+          const brand = p.brand ? `<span class="p-tag">${App.escapeHtml(p.brand)}</span>` : '';
+          const model = `<strong style="font-size:12px;">${App.escapeHtml(p.model || '-')}</strong>`;
+          const qty = p.qty ? `<span class="p-qty">×${p.qty}</span>` : '';
+          const delivery = p.delivery ? `<span class="p-delivery">📅 ${App.escapeHtml(p.delivery)}</span>` : '';
+          html += `<div class="product-item">${brand}${model} ${qty} ${delivery}</div>`;
+        });
+        html += '</div>';
+        return html;
+      }
+
+      return `<span style="font-size:12px;color:#555;word-break:break-all;">${App.escapeHtml(productModel)}</span>`;
+    }
+
     function resetSearch() {
       document.getElementById('searchInvoice').value = '';
-      document.getElementById('searchSpName').value = '';
       document.getElementById('searchStatus').value = '';
       showWelcome();
     }
