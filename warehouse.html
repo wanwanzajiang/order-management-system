@@ -132,6 +132,13 @@
 
       const { data, error } = await query;
 
+      // 首次加载可能 session 还没恢复，静默重试一次
+      if (error && !window._whRetried) {
+        window._whRetried = true;
+        setTimeout(() => { window._whRetried = false; loadOrders(); }, 1000);
+        return;
+      }
+
       if (error) {
         App.showError(container, '加载订单失败: ' + error.message);
         return;
