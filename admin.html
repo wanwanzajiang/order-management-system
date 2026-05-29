@@ -525,14 +525,11 @@
         return;
       }
 
-      // 获取未读留言数
-      const oids = data.map(o => o.id);
-      const unreadCounts = await API.getUnreadCounts(oids);
 
-      renderOrders(data, unreadCounts);
+      renderOrders(data);
     }
 
-    function renderOrders(orders, unreadCounts) {
+    function renderOrders(orders) {
       const container = document.getElementById('ordersContainer');
 
       orders.sort((a, b) => {
@@ -564,10 +561,6 @@
           '已到货': 'status-arrived',
           '已完结': 'status-completed'
         }[order.order_status] || '';
-
-        const uc = (unreadCounts && unreadCounts[order.id]) || 0;
-        const msgTag = uc ? `<span class="msg-count-tag" onclick="openAdmMsgPanel(${order.id},'${App.escapeHtml(order.invoice_no)}')">${uc}</span>` :
-          '<button class="btn btn-sm" style="font-size:10px;padding:2px 8px;background:#f5f5f5;border:1px solid #ddd;" onclick="openAdmMsgPanel('+order.id+',\''+order.invoice_no+'\')">查看</button>';
 
         html += `<tr data-id="${order.id}">
           <td><strong>${App.escapeHtml(order.invoice_no)}</strong></td>
@@ -1009,71 +1002,6 @@
     }
 
     // ========== 管理员留言系统 ==========
-    let _admMsgOrderId = null;
-
-    async function openAdmMsgPanel(orderId, invoiceNo) {
-      _admMsgOrderId = orderId;
-      document.getElementById('admMsgTitle').textContent = `💬 留言 - ${invoiceNo}`;
-      document.getElementById('admMsgBody').innerHTML = '<p class="msg-empty">加载中...</p>';
-      document.getElementById('admMsgInput').value = '';
-      document.getElementById('admMsgOverlay').classList.add('show');
-      const { data: msgs } = await API.getMessages(orderId);
-      renderAdmMessages(msgs || []);
-      // 标记所有非管理员留言为已读
-      await API.markMessagesRead(orderId, 'sales');
-      await API.markMessagesRead(orderId, 'warehouse');
-    }
-
-    function closeAdmMsgPanel() {
-      document.getElementById('admMsgOverlay').classList.remove('show');
-      _admMsgOrderId = null;
-      loadOrders();
-    }
-
-    function renderAdmMessages(msgs) {
-      const body = document.getElementById('admMsgBody');
-      if (!msgs || msgs.length === 0) { body.innerHTML = '<p class="msg-empty">暂无留言 💬</p>'; return; }
-      let html = '';
-      msgs.forEach(m => {
-        const isSelf = (m.author_role === 'admin' || m.author_role === 'super_admin');
-        const timeStr = new Date(m.created_at).toLocaleString('zh-CN', { month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' });
-        let roleLabel = '', cls = '';
-        if (isSelf) { roleLabel = '我'; cls = 'msg-self'; }
-        else if (m.author_role === 'sales') { roleLabel = '👤 业务·' + m.author_name; cls = 'msg-from-sales'; }
-        else if (m.author_role === 'warehouse') { roleLabel = '🏭 仓库'; cls = 'msg-from-wh'; }
-        else { roleLabel = '👤 ' + m.author_name; cls = 'msg-from-sales'; }
-        html += `<div class="msg-bubble ${cls}"><div>${App.escapeHtml(m.content).replace(/\n/g,'<br>')}</div><div class="msg-meta">${roleLabel} · ${timeStr}</div></div>`;
-      });
-      body.innerHTML = html;
-    }
-
-    async function sendAdmMessage() {
-      const input = document.getElementById('admMsgInput');
-      const content = input.value.trim();
-      if (!content) { showToast('请输入留言内容', 'error'); return; }
-      if (!_admMsgOrderId) return;
-      input.value = '';
-      const user = Auth.getUser();
-      const myRole = Auth.isSuper() ? 'super_admin' : 'admin';
-      const { error } = await API.addMessage({
-        order_id: _admMsgOrderId,
-        author_role: myRole,
-        author_name: user.full_name || user.email,
-        content: content
-      });
-      if (error) { showToast('发送失败: ' + error.message, 'error'); input.value = content; return; }
-      showToast('✅ 已发送', 'success');
-      const { data: msgs } = await API.getMessages(_admMsgOrderId);
-      renderAdmMessages(msgs || []);
-      setTimeout(() => { document.getElementById('admMsgBody').scrollTop = document.getElementById('admMsgBody').scrollHeight; }, 50);
-    }
-
-    document.addEventListener('keydown', e => {
-      if (e.key === 'Enter' && !e.shiftKey && document.getElementById('admMsgOverlay').classList.contains('send')) {
-        sendAdmMessage();
-      }
-    });
-  </script>
 
   <!-- 超管编辑弹窗 -->
   <div class="modal-overlay" id="orderEditModal" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:9999;opacity:0;pointer-events:none;transition:opacity .25s;">
