@@ -31,7 +31,6 @@
       <div class="filter-bar">
         <label style="font-weight:500;color:#555;">状态筛选：</label>
         <select id="filterStatus" class="form-control" style="width:auto;min-width:140px;" onchange="loadOrders()">
-          <option value="">全部状态</option>
           <option value="" selected>全部</option>
           <option value="调货中">调货中（优先处理）</option>
           <option value="路途中">路途中</option>
@@ -97,6 +96,13 @@
     }
 
     async function loadSalespeopleFilter() {
+      try {
+        const stored = Auth.getSession();
+        if (stored?.access_token) {
+          const { data: { session: sb } } = await SUPABASE.auth.getSession();
+          if (!sb) await SUPABASE.auth.setSession({ access_token: stored.access_token, refresh_token: stored.access_token });
+        }
+      } catch(_) {}
       const { data, error } = await SUPABASE
         .from('orders')
         .select('salesperson_name');
