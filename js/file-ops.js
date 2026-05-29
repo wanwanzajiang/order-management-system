@@ -307,13 +307,14 @@ const FileOps = {
   },
 
   /** 渲染文件按钮（订单行中） */
-  renderFileBtn(order, userRole) {
+  renderFileBtn(order, _roleFallback) {
     const files = Array.isArray(order.file_ids) ? order.file_ids : [];
     const count = files.length;
-    if (count === 0 && userRole === 'sales') return '';
+    const role = (Auth.getUser() || {}).role || _roleFallback || '';
+    if (count === 0 && role === 'sales') return '';
     const cls = count > 0 ? 'file-btn has-files' : 'file-btn';
     const label = count > 0 ? `📎 文件(${count})` : '📎 上传';
-    return `<button class="${cls}" onclick="FileOps.open(${order.id},'${App.escapeHtml(order.invoice_no)}','${userRole}')">${label}</button>`;
+    return `<button class="${cls}" onclick="FileOps.open(${order.id},'${App.escapeHtml(order.invoice_no)}','${role}')">${label}</button>`;
   }
 };
 window.FileOps = FileOps;
