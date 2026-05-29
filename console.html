@@ -251,7 +251,7 @@
 </div>
 <form id="editForm" onsubmit="saveEditedOrder(event,${order.id})">
   <div class="form-row-c">
-    <div class="form-group-c"><label>发票号 *</label><input type="text" id="e_invoice_no" value="${App.escapeHtml(order.invoice_no)}" required style="width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:6px;"></div>
+    <div class="form-group-c"><label>到款单号 *</label><input type="text" id="e_invoice_no" value="${App.escapeHtml(order.invoice_no)}" required style="width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:6px;"></div>
     <div class="form-group-c"><label>单据日期</label><input type="date" id="e_order_date" value="${order.order_date||''}" style="width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:6px;"></div>
     <div class="form-group-c"><label>总数量</label><input type="number" id="e_quantity" value="${order.quantity||0}" min="0" style="width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:6px;"></div>
   </div>
@@ -260,12 +260,10 @@
       <option value="">- 待填写 -</option>${CONFIG.ORDER_STATUSES.map(s=>`<option value="${s}" ${s===order.order_status?'selected':''}>${s}</option>`).join('')}
     </select></div>
     <div class="form-group-c"><label>业务员</label><input type="text" id="e_salesperson_name" value="${App.escapeHtml(order.salesperson_name||'')}" style="width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:6px;"></div>
-    <div class="form-group-c"><label>发货时间</label><input type="date" id="e_shipping_date" value="${order.shipping_date||''}" style="width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:6px;"></div>
+    <div class="form-group-c"><label>预计发货时间</label><input type="date" id="e_shipping_date" value="${order.shipping_date||''}" style="width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:6px;"></div>
   </div>
   <div class="form-row-c">
-    <div class="form-group-c"><label>快递单号</label><input type="text" id="e_tracking_no" value="${App.escapeHtml(order.tracking_no||'')}" style="width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:6px;"></div>
-    <div class="form-group-c"><label>仓库备注</label><input type="text" id="e_warehouse_notes" value="${App.escapeHtml(order.warehouse_notes||'')}" style="width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:6px;"></div>
-    <div class="form-group-c"><label>业务备注</label><input type="text" id="e_sales_notes" value="${App.escapeHtml(order.sales_notes||'')}" style="width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:6px;"></div>
+    <div class="form-group-c"><label>进度回复</label><input type="text" id="e_warehouse_notes" value="${App.escapeHtml(order.warehouse_notes||'')}" style="width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:6px;"></div>
   </div>
 
   <div class="prod-edit-area">
@@ -339,12 +337,10 @@
         order_status:document.getElementById('e_order_status').value||null,
         salesperson_name:document.getElementById('e_salesperson_name').value.trim(),
         shipping_date:document.getElementById('e_shipping_date').value||null,
-        tracking_no:document.getElementById('e_tracking_no').value.trim()||null,
         warehouse_notes:document.getElementById('e_warehouse_notes').value.trim(),
-        sales_notes:document.getElementById('e_sales_notes').value.trim(),
         product_model:JSON.stringify(prods)
       };
-      if(!payload.invoice_no||!ok){showToast('发票号和至少一个型号为必填','error');return;}
+      if(!payload.invoice_no||!ok){showToast('到款单号和至少一个型号为必填','error');return;}
       const{error}=await API.updateOrder(oid,payload);
       if(error){showToast('保存失败: '+error.message,'error');log(`订单 ${oid} 保存失败: ${error.message}`,'e');}
       else{showToast('✅ 订单已更新！','success');log(`订单 ${oid}(${payload.invoice_no}) 已完整编辑保存`,'s');refreshOrderSelect();}
@@ -411,7 +407,6 @@
     async function loadCMsgs(orderId) {
       const listEl = document.getElementById('cmsgList');
       const countEl = document.getElementById('cmsgCount');
-      const { data: msgs } = await API.getMessages(orderId);
       if (!msgs || msgs.length === 0) {
         listEl.innerHTML = '<p style="color:#bbb;text-align:center;padding:12px;font-size:12px;">暂无留言</p>';
         countEl.textContent = '';
@@ -439,7 +434,6 @@
       if (!content) return;
       input.value = '';
       const user = Auth.getUser();
-      const { error } = await API.addMessage({
         order_id: orderId,
         author_role: 'super_admin',
         author_name: user.full_name || user.email,
@@ -453,16 +447,12 @@
 
     async function deleteCMsg(msgId, orderId) {
       if (!confirm('确定删除此条留言？')) return;
-      const { error } = await API.deleteMessage(msgId);
       if (error) { showToast('删除失败', 'error'); return; }
       log(`删除了留言 #${msgId}`, 'w');
       loadCMsgs(orderId);
     }
 
     async function markAllReadC(orderId) {
-      await API.markMessagesRead(orderId, 'sales');
-      await API.markMessagesRead(orderId, 'warehouse');
-      await API.markMessagesRead(orderId, 'admin');
       showToast('✅ 全部标为已读', 'success');
       loadCMsgs(orderId);
     }
