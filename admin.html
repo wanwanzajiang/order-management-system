@@ -860,8 +860,7 @@
 
     async function updateWarehouseNotes(orderId, notes) {
       const { error } = await API.updateOrder(orderId, { warehouse_notes: notes });
-      if (error) showToast('更新备注失败: ' + error.message, 'error');
-    } = await API.updateOrder(orderId, { sales_notes: notes });
+      if (error) showToast('更新备注失败: ' + error.message, 'error');;
       if (error) {
         showToast('更新备注失败: ' + error.message, 'error');
       } else {
@@ -919,9 +918,7 @@
   <div class="form-group"><label>预计发货时间</label><input type="date" id="ei_ship" value="${order.shipping_date || ''}" style="width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:6px;"></div>
 </div>
 <div class="form-row-c" style="margin-bottom:12px;">
-  <div class="form-group"><label></label><input type="text" id="ei_track" value="${App.escapeHtml(order.tracking_no || '')}" style="width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:6px;"></div>
   <div class="form-group"><label>进度回复</label><input type="text" id="ei_wnotes" value="${App.escapeHtml(order.warehouse_notes || '')}" style="width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:6px;"></div>
-  <div class="form-group"><label></label><input type="text" id="ei_snotes" value="${App.escapeHtml(order.sales_notes || '')}" style="width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:6px;"></div>
 </div>
 
 <div style="border:1.5px solid #667eea;border-radius:10px;padding:14px;background:#fafbff;margin:10px 0;">
