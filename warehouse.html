@@ -90,11 +90,6 @@
     async function init() {
       const user = Auth.getUser();
       _currentRole = user.role;
-      // 确保 Supabase 客户端有 session
-      const stored = Auth.getSession();
-      if (stored?.access_token) {
-        await SUPABASE.auth.setSession({ access_token: stored.access_token, refresh_token: '' });
-      }
       document.getElementById('userName').textContent = user.full_name || user.email;
       document.getElementById('userRole').textContent = App.getRoleName(user.role);
       await loadSalespeopleFilter();
