@@ -115,10 +115,6 @@
               </select>
               <small class="form-hint" style="color:#888;font-size:12px;">如无选项，请到「业务员管理」添加</small>
             </div>
-            <div class="form-group">
-              <label for="salesNotes">业务员备注</label>
-              <input type="text" id="salesNotes" class="form-control">
-            </div>
           </div>
 
           <!-- 第三行：产品明细（核心区域） -->
@@ -583,16 +579,10 @@
           </td>
           <td>${App.escapeHtml(order.salesperson_name || '-')}</td>
           <td>${order.shipping_date || '-'}</td>
-          <td>${App.escapeHtml(order.tracking_no || '-')}</td>
           <td>
             <input type="text" class="notes-input warehouse-notes"
               value="${App.escapeHtml(order.warehouse_notes || '')}"
               onblur="updateWarehouseNotes(${order.id}, this.value)" placeholder="进度回复">
-          </td>
-          <td>
-            <input type="text" class="notes-input sales-notes"
-              value="${App.escapeHtml(order.sales_notes || '')}"
-              onblur="updateSalesNotes(${order.id}, this.value)" placeholder="">
           </td>
           <td style="text-align:center;">${msgTag}</td>
           <td style="white-space:nowrap;font-size:12px;color:#999;">${App.formatDate(order.created_at)}</td>
@@ -620,7 +610,6 @@
       const invoiceNo = document.getElementById('invoiceNo').value.trim();
       const orderDate = document.getElementById('orderDate').value;
       const salespersonName = document.getElementById('salespersonName').value;
-      const salesNotes = document.getElementById('salesNotes').value.trim();
 
       // 收集产品行数据
       const { products, hasValidData } = collectProducts();
@@ -654,8 +643,7 @@
         product_model: JSON.stringify(products),
         quantity: totalQty,
         delivery_date: null,
-        salesperson_name: salespersonName,
-        sales_notes: salesNotes
+        salesperson_name: salespersonName
       });
 
       setBtnLoading(btn, false, '添加订单');
@@ -873,10 +861,7 @@
     async function updateWarehouseNotes(orderId, notes) {
       const { error } = await API.updateOrder(orderId, { warehouse_notes: notes });
       if (error) showToast('更新备注失败: ' + error.message, 'error');
-    }
-
-    async function updateSalesNotes(orderId, notes) {
-      const { error } = await API.updateOrder(orderId, { sales_notes: notes });
+    } = await API.updateOrder(orderId, { sales_notes: notes });
       if (error) {
         showToast('更新备注失败: ' + error.message, 'error');
       } else {
@@ -1009,9 +994,7 @@
         order_status: document.getElementById('ei_status').value || null,
         salesperson_name: document.getElementById('ei_sp').value.trim(),
         shipping_date: document.getElementById('ei_ship').value || null,
-        tracking_no: document.getElementById('ei_track').value.trim() || null,
         warehouse_notes: document.getElementById('ei_wnotes').value.trim(),
-        sales_notes: document.getElementById('ei_snotes').value.trim(),
         product_model: JSON.stringify(products)
       };
       if (!payload.invoice_no || !ok) { showToast('到款单号和至少一个型号必填', 'error'); return; }

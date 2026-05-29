@@ -229,14 +229,6 @@
                 title="由进度回复实际预计发货时间">
             </td>
             <td>
-              <input type="text" class="form-control tracking-input"
-                value="${App.escapeHtml(order.tracking_no || '')}"
-                onblur="updateTracking(${order.id}, this.value)"
-                placeholder="填写"
-                style="width:150px;padding:4px 6px;font-size:13px;"
-                title="由进度回复快递/物流单号">
-            </td>
-            <td>
               <input type="text" class="notes-input warehouse-notes"
                 value="${App.escapeHtml(order.warehouse_notes || '')}"
                 onblur="updateWarehouseNotes(${order.id}, this.value)" placeholder="进度回复">
@@ -301,10 +293,7 @@
       const { error } = await API.updateOrder(id, { shipping_date: dateVal || null });
       if (error) showToast('保存预计发货时间失败: ' + error.message, 'error');
       else console.log('[Warehouse] 预计发货时间已更新:', dateVal);
-    }
-
-    async function updateTracking(id, noVal) {
-      const { error } = await API.updateOrder(id, { tracking_no: noVal.trim() || null });
+    } = await API.updateOrder(id, { tracking_no: noVal.trim() || null });
       if (error) showToast('保存单号失败: ' + error.message, 'error');
       else console.log('[Warehouse] 已更新:', noVal);
     }

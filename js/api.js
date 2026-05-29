@@ -100,7 +100,6 @@ const API = {
         // 状态默认为空，由仓库填写
         order_status: orderData.order_status || null,
         salesperson_name: orderData.salesperson_name,
-        sales_notes: orderData.sales_notes || '',
         sales_id: null
       })
       .select()
