@@ -126,9 +126,9 @@
       {id:'spManage',icon:'👥',label:'业务员'},
       {id:'logs',icon:'📋',label:'操作日志'}
     ];
-    if (!Auth.isSuper()) { window.location.href = 'login.html'; } else { initC(); }
-
     let activeTab = 'overview';
+    const logs = [];
+    if (!Auth.isSuper()) { window.location.href = 'login.html'; } else { initC(); }
     const logs = [];
 
     function log(msg,type){const t={i:'li',s:'ls',e:'le',w:'lw'}[type]||'lw';logs.push({m:msg,t:t,dt:new Date().toLocaleTimeString()});renderLogs();}
