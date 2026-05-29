@@ -55,7 +55,7 @@
     .oc-info { flex:1;min-width:160px;display:flex;flex-direction:column;gap:6px; }
     .oc-info-row { font-size:12px;display:flex;align-items:center;gap:4px;color:#555; }
     .oc-actions { display:flex;gap:6px;margin-top:10px;flex-wrap:wrap; }
-    .msg-badge { background:#e07a5f;color:#fff;font-size:11px;padding:1px 7px;border-radius:10px;margin-left:4px; }
+    
 
     /* 产品明细（卡片内） */
     .pi-card { background:#fafbff;border-radius:8px;padding:10px 12px;border:1px dashed #d0d7ee; }
@@ -66,7 +66,6 @@
     .pi-qty { color:#e67e22;font-weight:500; }
     .pi-delivery { color:#aaa;font-size:11px;margin-left:auto; }
 
-    /* 留言弹窗 */
       position:fixed;top:0;left:0;right:0;bottom:0;
       background:rgba(0,0,0,0.45);z-index:10000;
       display:flex;align-items:center;justify-content:center;
@@ -81,11 +80,11 @@
     }
       max-width:82%;padding:10px 14px;border-radius:12px;margin-bottom:10px;font-size:13px;line-height:1.5;
     }
-    .msg-from-sales { background:#eef1ff;color:#334;border-top-left-radius:4px;align-self:flex-start; }
-    .msg-from-wh { background:#f0f9ff;color:#224;border-top-left-radius:4px;align-self:flex-start; }
-    .msg-from-admin { background:#fef3e2;color:#432;border-top-left-radius:4px;align-self:flex-start; }
-    .msg-self { background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;border-top-right-radius:4px;align-self:flex-end;margin-left:auto; }
-    .msg-meta { font-size:10px;color:#999;margin-top:3px; }
+    
+    
+    
+    
+    
       padding:14px 20px;border-top:1px solid #eee;display:flex;gap:8px;align-items:flex-end;
     }
       flex:1;border:1.5px solid #ddd;border-radius:10px;padding:10px 12px;
@@ -96,7 +95,7 @@
       border:none;border-radius:10px;font-size:13px;cursor:pointer;font-weight:500;white-space:nowrap;
       transition:transform .15s;
     }
-    .msg-unread-dot { width:8px;height:8px;background:#e07a5f;border-radius:50%;display:inline-block;margin-right:4px;animation:pulse 1.5s infinite; }
+    
     @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
   </style>
 </head>
@@ -158,7 +157,6 @@
   </div>
 
   <!-- 留言面板 -->
-        <textarea id="msgInput" placeholder="输入留言..." rows="2"></textarea>
       </div>
     </div>
   </div>
@@ -293,10 +291,8 @@
     }
 
     async `;
-      document.getElementById('msgInput').value='';
 
 
-      // 自动标记仓库/管理员留言为已读
     }
 
     
@@ -304,31 +300,18 @@
     
 
       let html='';
-      msgs.forEach(m=>{
-        const isSelf=m.author_role==='sales';
         const timeStr=new Date(m.created_at).toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
-        let roleLabel='',cls='';
-        if(isSelf){roleLabel='我';cls='msg-self';}
-        else if(m.author_role==='warehouse'){roleLabel='🏭 仓库';cls='msg-from-wh';}
-        else if(m.author_role==='admin'){roleLabel='⭐ 管理员';cls='msg-from-admin';}
-        else{roleLabel='👤 '+m.author_name;cls='msg-from-sales';}
 
-        const unread=!m.is_read&&!isReadByMe(m)?' <span class="msg-unread-dot"></span>':'';
-          <div>${App.escapeHtml(m.content).replace(/\n/g,'<br>')}${unread}</div>
-          <div class="msg-meta">${roleLabel} · ${timeStr}</div>
         </div>`;
       });
       body.innerHTML=html;
     }
 
-    function isReadByMe(msg){return msg.is_read||(msg.author_role!=='sales'||true);}
 
     async 
 
       input.value='';
       const user=Auth.getUser();
-        author_role:'sales',
-        author_name:(currentSp&&currentSp.name)||(user.full_name||user.email),
         content:content
       });
 
@@ -336,7 +319,6 @@
       showToast('✅ 留言已发送','success');
       // 滚动到底部
       setTimeout(()=>{
-        const body=document.getElementById('msgBody');body.scrollTop=body.scrollHeight;
       },50);
 
       // 回车发送
