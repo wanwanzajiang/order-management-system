@@ -129,7 +129,6 @@
     let activeTab = 'overview';
     const logs = [];
     if (!Auth.isSuper()) { window.location.href = 'login.html'; } else { initC(); }
-    const logs = [];
 
     function log(msg,type){const t={i:'li',s:'ls',e:'le',w:'lw'}[type]||'lw';logs.push({m:msg,t:t,dt:new Date().toLocaleTimeString()});renderLogs();}
 
@@ -137,8 +136,7 @@
       const user = Auth.getUser();
       document.getElementById('userName').textContent = (user && user.full_name) || 'Admin';
       renderNav();
-      // 等待 Supabase 就绪后加载数据
-      SUPABASE.auth.getSession().then(() => switchTab('overview'));
+      switchTab('overview');
     }
 
     function renderNav(){
