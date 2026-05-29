@@ -284,9 +284,16 @@
             <div class="oc-products"><div class="pi-card">${renderProducts(order.product_model)}</div></div>
             <div class="oc-info">
               <div class="oc-info-row">📦 数量：<strong>${order.quantity||'-'}</strong></div>
-              <div class="oc-info-row">🚚 发货：${order.shipping_date||'<span style="color:#ccc;">待填写</span>'}</div>
+              <div class="oc-info-row">🚚 预计发货时间：${order.shipping_date||'<span style="color:#ccc;">待填写</span>'}</div>
               <div class="oc-info-row" title="${App.escapeHtml(order.warehouse_notes||'')}">📝 进度回复：${App.escapeHtml((order.warehouse_notes||'-').substring(0,20))}${(order.warehouse_notes||'').length>20?'...':''}</div>
-              <div class="oc-info-row" title="${App.escapeHtml(order.sales_notes||'')}">📝 ：${App.escapeHtml((order.sales_notes||'-').substring(0,20))}${(order.sales_notes||'').length>20?'...':''}</div>
+              ${order.order_status === '已到货' ? '<div style="margin-top:6px;padding-top:6px;border-top:1px dashed #e0d5c5;display:flex;flex-wrap:wrap;gap:6px;align-items:center;">' +
+                '<label style="font-size:11px;color:#888;">是否带来：<select onchange="sfUpdate(' + order.id + ',\'bring_goods\',this.value)" style="font-size:11px;padding:2px 4px;border-radius:4px;border:1px solid #ddd;">' +
+                '<option value="">-</option><option value="true"' + (order.bring_goods===true?' selected':'') + '>是</option><option value="false"' + (order.bring_goods===false?' selected':'') + '>否</option></select></label>' +
+                '<label style="font-size:11px;color:#888;">拍照：<select onchange="sfUpdate(' + order.id + ',\'photo_request\',this.value)" style="font-size:11px;padding:2px 4px;border-radius:4px;border:1px solid #ddd;">' +
+                '<option value="false"' + (!order.photo_request?' selected':'') + '>否</option><option value="true"' + (order.photo_request?' selected':'') + '>是</option></select></label>' +
+                '<label style="font-size:11px;color:#888;">验货：<input type="date" onchange="sfUpdate(' + order.id + ',\'inspection_date\',this.value||null)" value="' + (order.inspection_date||'') + '" style="font-size:11px;padding:2px;border-radius:4px;border:1px solid #ddd;width:115px;"></label>' +
+                '<label style="font-size:11px;color:#888;">收回：<input type="date" onchange="sfUpdate(' + order.id + ',\'return_date\',this.value||null)" value="' + (order.return_date||'') + '" style="font-size:11px;padding:2px;border-radius:4px;border:1px solid #ddd;width:115px;"></label>' +
+                '</div>' : ''}
             </div>
           </div>
           <div class="oc-actions">
@@ -390,6 +397,11 @@
     }
 
     function resetSearch(){document.getElementById('searchInvoice').value='';document.getElementById('searchStatus').value='';showWelcome();}
+    async function sfUpdate(orderId, field, value){
+      if (value === '' || value === null || value === 'null') value = null;
+      const upd = {}; upd[field] = value;
+      await API.updateOrder(orderId, upd);
+    }
   </script>
 </body>
 </html>
