@@ -110,6 +110,7 @@
   </div>
 
   <script>
+    window.onerror = function(m,s,l,c,e){ document.getElementById('ordersContainer').innerHTML = '<div style=\"padding:20px;color:red;background:#fff3f3;border-radius:8px;\"><strong>JS错误:</strong> '+m+'<br><small>'+s+':'+l+'</small></div>'; };
     document.getElementById('footerYear').textContent = new Date().getFullYear();
 
     if (!Auth.requireRole([CONFIG.ROLES.WAREHOUSE, CONFIG.ROLES.ADMIN])) {
