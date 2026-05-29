@@ -3,22 +3,50 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>进度回复系统 - 管理</title>
-  <link rel="stylesheet" href="css/style.css?v=1780048640">
+  <title>订单管理 - 管理员</title>
+  <link rel="stylesheet" href="css/style.css">
   <style>
     #orderEditModal.show{opacity:1;pointer-events:auto;}
     #orderEditModal.show #orderEditBox{transform:translateY(0);}
     .form-row-c{display:flex;gap:12px;flex-wrap:wrap;}
-    /* 编辑弹窗 */
+    /* 留言面板 */
+    .msg-overlay {
+      position:fixed;top:0;left:0;right:0;bottom:0;
+      background:rgba(0,0,0,0.45);z-index:10000;display:flex;align-items:center;justify-content:center;
+      opacity:0;pointer-events:none;transition:opacity .25s;
+    }
+    .msg-overlay.show{opacity:1;pointer-events:auto;}
+    .msg-panel{
+      background:#fff;border-radius:16px;width:92%;max-width:520px;max-height:80vh;display:flex;flex-direction:column;
+      box-shadow:0 20px 60px rgba(0,0,0,0.25);transform:translateY(20px);transition:transform .25s;
+    }
+    .msg-overlay.show .msg-panel{transform:translateY(0);}
+    .msg-header{padding:16px 20px;background:linear-gradient(135deg,#667eea,#764ba2);border-radius:16px 16px 0 0;display:flex;justify-content:space-between;align-items:center;}
+    .msg-header h3{margin:0;color:#fff;font-size:15px;}
+    .msg-close{background:none;border:none;color:rgba(255,255,255,0.8);font-size:22px;cursor:pointer;line-height:1;}
+    .msg-body{flex:1;overflow-y:auto;padding:16px 20px;}
+    .msg-bubble{max-width:82%;padding:10px 14px;border-radius:12px;margin-bottom:10px;font-size:13px;line-height:1.5;}
+    .msg-from-sales{background:#eef1ff;color:#334;border-top-left-radius:4px;align-self:flex-start;}
+    .msg-from-wh{background:#f0f9ff;color:#224;border-top-left-radius:4px;align-self:flex-start;}
+    .msg-self{background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;border-top-right-radius:4px;align-self:flex-end;margin-left:auto;}
+    .msg-meta{font-size:10px;color:#999;margin-top:3px;}
+    .msg-input-area{padding:14px 20px;border-top:1px solid #eee;display:flex;gap:8px;align-items:flex-end;}
+    .msg-input-area textarea{
+      flex:1;border:1.5px solid #ddd;border-radius:10px;padding:10px 12px;font-size:13px;resize:none;height:48px;font-family:inherit;outline:none;transition:border-color .2s;
+    }
+    .msg-input-area textarea:focus{border-color:#667eea;box-shadow:0 0 0 3px rgba(102,126,234,0.12);}
+    .msg-send-btn{padding:10px 18px;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;border:none;border-radius:10px;font-size:13px;cursor:pointer;font-weight:500;white-space:nowrap;}
+    .msg-send-btn:hover{opacity:.9;}
     .msg-empty{text-align:center;color:#bbb;padding:30px;font-size:13px;}
     .msg-unread-dot{width:8px;height:8px;background:#e07a5f;border-radius:50%;display:inline-block;margin-right:4px;animation:pulse 1.5s infinite;}
     @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+    .msg-count-tag{background:#e07a5f;color:#fff;font-size:10px;padding:1px 6px;border-radius:8px;font-weight:500;cursor:pointer;}
   </style>
 </head>
 <body>
   <header class="header">
     <div class="container">
-      <h1>📦 进度回复系统 - 管理员</h1>
+      <h1>📦 订单管理系统 - 管理员</h1>
       <div class="header-info">
         <div class="user-info">
           <span id="userName">管理员</span>
@@ -37,7 +65,7 @@
     <!-- Tab 导航 -->
     <div class="tab-nav" id="tabNav">
       <button class="tab-btn active" data-tab="dashboard" onclick="switchTab('dashboard')">📊 数据概览</button>
-      <button class="tab-btn" data-tab="orders" onclick="switchTab('orders')">📋 订单新增</button>
+      <button class="tab-btn" data-tab="orders" onclick="switchTab('orders')">📋 订单管理</button>
       <button class="tab-btn" data-tab="salespeople" onclick="switchTab('salespeople')">👥 业务员管理</button>
     </div>
 
@@ -60,7 +88,7 @@
       </div>
     </div>
 
-    <!-- ===== Tab 2: 进度回复 ===== -->
+    <!-- ===== Tab 2: 订单管理 ===== -->
     <div class="tab-content" id="tab-orders" style="display:none;">
       <!-- 新增订单表单（多产品版） -->
       <div class="card">
@@ -69,7 +97,7 @@
           <!-- 第一行：基础信息 -->
           <div class="form-row">
             <div class="form-group">
-              <label for="invoiceNo">到款单号 / 单号 *</label>
+              <label for="invoiceNo">发票号 / 单号 *</label>
               <input type="text" id="invoiceNo" class="form-control" required>
             </div>
             <div class="form-group">
@@ -86,6 +114,10 @@
                 <option value=""></option>
               </select>
               <small class="form-hint" style="color:#888;font-size:12px;">如无选项，请到「业务员管理」添加</small>
+            </div>
+            <div class="form-group">
+              <label for="salesNotes">业务员备注</label>
+              <input type="text" id="salesNotes" class="form-control">
             </div>
           </div>
 
@@ -182,14 +214,14 @@
   </main>
 
   <footer class="footer">
-    © <span id="footerYear"></span> 进度回复系统 · 管理员面板
+    © <span id="footerYear"></span> 订单管理系统 · 管理员面板
   </footer>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="js/config.js?v=1780048640"></script>
-  <script src="js/auth.js?v=1780048640"></script>
-  <script src="js/api.js?v=1780048640"></script>
-  <script src="js/app.js?v=1780048640"></script>
+  <script src="js/config.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/app.js"></script>
   <script>
     // 页脚年份
     document.getElementById('footerYear').textContent = new Date().getFullYear();
@@ -429,7 +461,7 @@
       container.innerHTML = html;
     }
 
-    // ========== 进度回复 ==========
+    // ========== 订单管理 ==========
 
     // 加载业务员下拉选项（用于新建订单）
     async function loadSalespeopleSelect() {
@@ -492,10 +524,14 @@
         return;
       }
 
-      renderOrders(data);
+      // 获取未读留言数
+      const oids = data.map(o => o.id);
+      const unreadCounts = await API.getUnreadCounts(oids);
+
+      renderOrders(data, unreadCounts);
     }
 
-    function renderOrders(orders) {
+    function renderOrders(orders, unreadCounts) {
       const container = document.getElementById('ordersContainer');
 
       orders.sort((a, b) => {
@@ -508,10 +544,10 @@
           <table>
             <thead>
               <tr>
-                <th>到款单号</th><th style="cursor:pointer;user-select:none;white-space:nowrap;" onclick="toggleOrderDateSort()">单据日期 <span id="orderDateSortIcon" style="font-size:11px;color:#999;">↓ 降序</span></th><th style="min-width:200px;">产品明细</th>
+                <th>发票号</th><th style="cursor:pointer;user-select:none;white-space:nowrap;" onclick="toggleOrderDateSort()">单据日期 <span id="orderDateSortIcon" style="font-size:11px;color:#999;">↓ 降序</span></th><th style="min-width:200px;">产品明细</th>
                 <th>总数量</th><th>状态</th>
-                <th>业务员</th><th>预计发货时间</th>
-                <th>进度回复</th>
+                <th>业务员</th><th>发货时间</th><th>快递单号</th>
+                <th>仓库备注</th><th>业务备注</th><th style="min-width:50px;">💬留言</th>
                 <th>创建时间</th><th>操作</th>
               </tr>
             </thead>
@@ -528,6 +564,9 @@
           '已完结': 'status-completed'
         }[order.order_status] || '';
 
+        const uc = (unreadCounts && unreadCounts[order.id]) || 0;
+        const msgTag = uc ? `<span class="msg-count-tag" onclick="openAdmMsgPanel(${order.id},'${App.escapeHtml(order.invoice_no)}')">${uc}</span>` :
+          '<button class="btn btn-sm" style="font-size:10px;padding:2px 8px;background:#f5f5f5;border:1px solid #ddd;" onclick="openAdmMsgPanel('+order.id+',\''+order.invoice_no+'\')">查看</button>';
 
         html += `<tr data-id="${order.id}">
           <td><strong>${App.escapeHtml(order.invoice_no)}</strong></td>
@@ -544,11 +583,18 @@
           </td>
           <td>${App.escapeHtml(order.salesperson_name || '-')}</td>
           <td>${order.shipping_date || '-'}</td>
+          <td>${App.escapeHtml(order.tracking_no || '-')}</td>
           <td>
             <input type="text" class="notes-input warehouse-notes"
               value="${App.escapeHtml(order.warehouse_notes || '')}"
-              onblur="updateWarehouseNotes(${order.id}, this.value)" placeholder="进度回复">
+              onblur="updateWarehouseNotes(${order.id}, this.value)" placeholder="仓库填写">
           </td>
+          <td>
+            <input type="text" class="notes-input sales-notes"
+              value="${App.escapeHtml(order.sales_notes || '')}"
+              onblur="updateSalesNotes(${order.id}, this.value)" placeholder="业务备注">
+          </td>
+          <td style="text-align:center;">${msgTag}</td>
           <td style="white-space:nowrap;font-size:12px;color:#999;">${App.formatDate(order.created_at)}</td>
           <td>
             <button class="btn btn-danger btn-sm" onclick="deleteOrder(${order.id})">删除</button>
@@ -574,6 +620,7 @@
       const invoiceNo = document.getElementById('invoiceNo').value.trim();
       const orderDate = document.getElementById('orderDate').value;
       const salespersonName = document.getElementById('salespersonName').value;
+      const salesNotes = document.getElementById('salesNotes').value.trim();
 
       // 收集产品行数据
       const { products, hasValidData } = collectProducts();
@@ -591,10 +638,10 @@
       // 计算总数量
       const totalQty = products.reduce((sum, p) => sum + (p.qty || 0), 0);
 
-      // 到款单号重复检测
+      // 发票号重复检测
       const existing = await API.getOrderByInvoice(invoiceNo);
       if (existing.data) {
-        showToast('该到款单号已存在，请检查后重新输入', 'error');
+        showToast('该发票号已存在，请检查后重新输入', 'error');
         return;
       }
 
@@ -607,7 +654,8 @@
         product_model: JSON.stringify(products),
         quantity: totalQty,
         delivery_date: null,
-        salesperson_name: salespersonName
+        salesperson_name: salespersonName,
+        sales_notes: salesNotes
       });
 
       setBtnLoading(btn, false, '添加订单');
@@ -670,10 +718,7 @@
               ${!isActive ? 'disabled style="background:#f5f5f5;color:#999;"' : ''}>
           </td>
           <td>
-            <input type="text" class="inline-edit" id="spcode-${sp.id}"
-              value="${App.escapeHtml(sp.access_code || '')}"
-              style="width:100px;padding:4px 8px;border:1px solid #ddd;border-radius:4px;"
-              ${!isActive ? 'disabled style="background:#f5f5f5;color:#999;"' : ''}>
+            <span style="font-family:monospace;font-size:12px;background:#e8f0fe;color:#1a56db;padding:2px 8px;border-radius:4px;">${App.escapeHtml(sp.access_code || '-')}</span>
           </td>
           <td>
             <span class="status-badge" style="
@@ -741,18 +786,14 @@
     // 保存业务员改名
     async function saveSpName(id) {
       const input = document.getElementById('spname-' + id);
-      const codeInput = document.getElementById('spcode-' + id);
       const newName = input.value.trim();
-      const newCode = codeInput ? codeInput.value.trim().toUpperCase() : '';
 
       if (!newName) {
         showToast('姓名不能为空', 'error');
         return;
       }
 
-      const updates = { name: newName };
-      if (newCode) updates.access_code = newCode;
-      const { error } = await API.updateSalesperson(id, updates);
+      const { error } = await API.updateSalesperson(id, { name: newName });
 
       if (error) {
         if (error.message && error.message.includes('unique')) {
@@ -831,7 +872,11 @@
 
     async function updateWarehouseNotes(orderId, notes) {
       const { error } = await API.updateOrder(orderId, { warehouse_notes: notes });
-      if (error) showToast('更新备注失败: ' + error.message, 'error');;
+      if (error) showToast('更新备注失败: ' + error.message, 'error');
+    }
+
+    async function updateSalesNotes(orderId, notes) {
+      const { error } = await API.updateOrder(orderId, { sales_notes: notes });
       if (error) {
         showToast('更新备注失败: ' + error.message, 'error');
       } else {
@@ -879,17 +924,19 @@
         body.innerHTML = `
 <form onsubmit="saveEdited(event)">
 <div class="form-row-c" style="margin-bottom:12px;">
-  <div class="form-group"><label>到款单号 *</label><input type="text" id="ei_no" value="${App.escapeHtml(order.invoice_no)}" required style="width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:6px;"></div>
+  <div class="form-group"><label>发票号 *</label><input type="text" id="ei_no" value="${App.escapeHtml(order.invoice_no)}" required style="width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:6px;"></div>
   <div class="form-group"><label>单据日期</label><input type="date" id="ei_date" value="${order.order_date || ''}" style="width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:6px;"></div>
   <div class="form-group"><label>总数量</label><input type="number" id="ei_qty" value="${order.quantity || 0}" min="0" style="width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:6px;"></div>
 </div>
 <div class="form-row-c" style="margin-bottom:12px;">
   <div class="form-group"><label>状态</label><select id="ei_status" style="width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:6px;"><option value="">- 待填写 -</option>${CONFIG.ORDER_STATUSES.map(s => `<option value="${s}" ${s === order.order_status ? 'selected' : ''}>${s}</option>`).join('')}</select></div>
   <div class="form-group"><label>业务员</label><input type="text" id="ei_sp" value="${App.escapeHtml(order.salesperson_name || '')}" style="width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:6px;"></div>
-  <div class="form-group"><label>预计发货时间</label><input type="date" id="ei_ship" value="${order.shipping_date || ''}" style="width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:6px;"></div>
+  <div class="form-group"><label>发货时间</label><input type="date" id="ei_ship" value="${order.shipping_date || ''}" style="width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:6px;"></div>
 </div>
 <div class="form-row-c" style="margin-bottom:12px;">
-  <div class="form-group"><label>进度回复</label><input type="text" id="ei_wnotes" value="${App.escapeHtml(order.warehouse_notes || '')}" style="width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:6px;"></div>
+  <div class="form-group"><label>快递单号</label><input type="text" id="ei_track" value="${App.escapeHtml(order.tracking_no || '')}" style="width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:6px;"></div>
+  <div class="form-group"><label>仓库备注</label><input type="text" id="ei_wnotes" value="${App.escapeHtml(order.warehouse_notes || '')}" style="width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:6px;"></div>
+  <div class="form-group"><label>业务备注</label><input type="text" id="ei_snotes" value="${App.escapeHtml(order.sales_notes || '')}" style="width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:6px;"></div>
 </div>
 
 <div style="border:1.5px solid #667eea;border-radius:10px;padding:14px;background:#fafbff;margin:10px 0;">
@@ -962,10 +1009,12 @@
         order_status: document.getElementById('ei_status').value || null,
         salesperson_name: document.getElementById('ei_sp').value.trim(),
         shipping_date: document.getElementById('ei_ship').value || null,
+        tracking_no: document.getElementById('ei_track').value.trim() || null,
         warehouse_notes: document.getElementById('ei_wnotes').value.trim(),
+        sales_notes: document.getElementById('ei_snotes').value.trim(),
         product_model: JSON.stringify(products)
       };
-      if (!payload.invoice_no || !ok) { showToast('到款单号和至少一个型号必填', 'error'); return; }
+      if (!payload.invoice_no || !ok) { showToast('发票号和至少一个型号必填', 'error'); return; }
       const btn = e.target.querySelector('button[type="submit"]');
       setBtnLoading(btn, true, '保存中...');
       const { error } = await API.updateOrder(_editingOrderId, payload);
@@ -974,6 +1023,71 @@
       else { showToast('✅ 订单已更新！', 'success'); closeEditModal(); await loadOrders(); }
     }
 
+    // ========== 管理员留言系统 ==========
+    let _admMsgOrderId = null;
+
+    async function openAdmMsgPanel(orderId, invoiceNo) {
+      _admMsgOrderId = orderId;
+      document.getElementById('admMsgTitle').textContent = `💬 留言 - ${invoiceNo}`;
+      document.getElementById('admMsgBody').innerHTML = '<p class="msg-empty">加载中...</p>';
+      document.getElementById('admMsgInput').value = '';
+      document.getElementById('admMsgOverlay').classList.add('show');
+      const { data: msgs } = await API.getMessages(orderId);
+      renderAdmMessages(msgs || []);
+      // 标记所有非管理员留言为已读
+      await API.markMessagesRead(orderId, 'sales');
+      await API.markMessagesRead(orderId, 'warehouse');
+    }
+
+    function closeAdmMsgPanel() {
+      document.getElementById('admMsgOverlay').classList.remove('show');
+      _admMsgOrderId = null;
+      loadOrders();
+    }
+
+    function renderAdmMessages(msgs) {
+      const body = document.getElementById('admMsgBody');
+      if (!msgs || msgs.length === 0) { body.innerHTML = '<p class="msg-empty">暂无留言 💬</p>'; return; }
+      let html = '';
+      msgs.forEach(m => {
+        const isSelf = (m.author_role === 'admin' || m.author_role === 'super_admin');
+        const timeStr = new Date(m.created_at).toLocaleString('zh-CN', { month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' });
+        let roleLabel = '', cls = '';
+        if (isSelf) { roleLabel = '我'; cls = 'msg-self'; }
+        else if (m.author_role === 'sales') { roleLabel = '👤 业务·' + m.author_name; cls = 'msg-from-sales'; }
+        else if (m.author_role === 'warehouse') { roleLabel = '🏭 仓库'; cls = 'msg-from-wh'; }
+        else { roleLabel = '👤 ' + m.author_name; cls = 'msg-from-sales'; }
+        html += `<div class="msg-bubble ${cls}"><div>${App.escapeHtml(m.content).replace(/\n/g,'<br>')}</div><div class="msg-meta">${roleLabel} · ${timeStr}</div></div>`;
+      });
+      body.innerHTML = html;
+    }
+
+    async function sendAdmMessage() {
+      const input = document.getElementById('admMsgInput');
+      const content = input.value.trim();
+      if (!content) { showToast('请输入留言内容', 'error'); return; }
+      if (!_admMsgOrderId) return;
+      input.value = '';
+      const user = Auth.getUser();
+      const myRole = Auth.isSuper() ? 'super_admin' : 'admin';
+      const { error } = await API.addMessage({
+        order_id: _admMsgOrderId,
+        author_role: myRole,
+        author_name: user.full_name || user.email,
+        content: content
+      });
+      if (error) { showToast('发送失败: ' + error.message, 'error'); input.value = content; return; }
+      showToast('✅ 已发送', 'success');
+      const { data: msgs } = await API.getMessages(_admMsgOrderId);
+      renderAdmMessages(msgs || []);
+      setTimeout(() => { document.getElementById('admMsgBody').scrollTop = document.getElementById('admMsgBody').scrollHeight; }, 50);
+    }
+
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Enter' && !e.shiftKey && document.getElementById('admMsgOverlay').classList.contains('send')) {
+        sendAdmMessage();
+      }
+    });
   </script>
 
   <!-- 超管编辑弹窗 -->
@@ -986,8 +1100,14 @@
       <div id="orderEditModalBody" style="padding:22px;"></div>
     </div>
   </div>
-
+  <!-- 留言面板 -->
+  <div class="msg-overlay" id="admMsgOverlay" onclick="if(event.target===this)closeAdmMsgPanel()">
+    <div class="msg-panel">
+      <div class="msg-header"><h3 id="admMsgTitle">💬 订单留言</h3><button class="msg-close" onclick="closeAdmMsgPanel()">&times;</button></div>
+      <div class="msg-body" id="admMsgBody"><p class="msg-empty">加载中...</p></div>
       <div class="msg-input-area">
+        <textarea id="admMsgInput" placeholder="留言..." rows="2"></textarea>
+        <button class="msg-send-btn" onclick="sendAdmMessage()">发送</button>
       </div>
     </div>
   </div>
