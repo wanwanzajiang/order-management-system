@@ -137,7 +137,8 @@
       const user = Auth.getUser();
       document.getElementById('userName').textContent = (user && user.full_name) || 'Admin';
       renderNav();
-      switchTab('overview');
+      // 等待 Supabase 就绪后加载数据
+      SUPABASE.auth.getSession().then(() => switchTab('overview'));
     }
 
     function renderNav(){

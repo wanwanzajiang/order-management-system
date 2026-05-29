@@ -236,6 +236,8 @@
       // 初始化时默认添加一行产品
       addProductRow();
 
+      // 等待 Supabase 客户端就绪
+      await SUPABASE.auth.getSession();
       await loadDashboard();
     }
 
