@@ -44,11 +44,12 @@ serve(async (req: Request) => {
     return json({ error: "仅超级管理员可操作" }, 403);
   }
 
-  const { action } = await req.json() as { action: string; [key: string]: unknown };
+  const body = await req.json() as { action: string; [key: string]: unknown };
+  const { action } = body;
 
   // ======== 创建用户 ========
   if (action === "create-user") {
-    const { email, password, role, full_name } = await req.json() as {
+    const { email, password, role, full_name } = body as {
       email: string; password: string; role: string; full_name?: string;
     };
     if (!email || !password || !role) {
@@ -77,7 +78,7 @@ serve(async (req: Request) => {
 
   // ======== 删除用户 ========
   if (action === "delete-user") {
-    const { user_id } = await req.json() as { user_id: string };
+    const { user_id } = body as { user_id: string };
     if (!user_id) return json({ error: "缺少 user_id" }, 400);
 
     // 不能删自己
@@ -91,7 +92,7 @@ serve(async (req: Request) => {
 
   // ======== 重置密码 ========
   if (action === "reset-password") {
-    const { user_id, new_password } = await req.json() as { user_id: string; new_password: string };
+    const { user_id, new_password } = body as { user_id: string; new_password: string };
     if (!user_id || !new_password) return json({ error: "缺少参数" }, 400);
     if (new_password.length < 6) return json({ error: "密码至少6位" }, 400);
 
