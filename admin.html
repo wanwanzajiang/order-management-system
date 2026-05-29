@@ -849,12 +849,10 @@
       SUPABASE.from('orders').select('*').eq('id', oid).single().then(({ data: order }) => {
         if (!order) { body.innerHTML = '<p style="color:red;text-align:center;">订单不存在</p>'; return; }
         document.getElementById('editModalTitle2').textContent = '✏️ 编辑: ' + order.invoice_no;
-
         let prods = [];
         if (typeof order.product_model === 'string' && order.product_model.startsWith('[')) {
           try { prods = JSON.parse(order.product_model); } catch(e) {}
         }
-
         body.innerHTML = `
 <form onsubmit="saveEdited(event)">
 <div class="form-row-c" style="margin-bottom:12px;">
@@ -886,6 +884,9 @@
         _eprc = 0;
         if (prods.length) prods.forEach(p => addEPRow(p)); else addEPRow();
         updateEISum();
+      }).catch(e => {
+        console.error('加载订单编辑失败:', e);
+        body.innerHTML = '<p style="color:red;text-align:center;padding:30px;">加载失败，请刷新重试</p>';
       });
     }
 
