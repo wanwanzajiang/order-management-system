@@ -9,15 +9,6 @@
     #orderEditModal.show{opacity:1;pointer-events:auto;}
     #orderEditModal.show #orderEditBox{transform:translateY(0);}
     .form-row-c{display:flex;gap:12px;flex-wrap:wrap;}
-      position:fixed;top:0;left:0;right:0;bottom:0;
-      background:rgba(0,0,0,0.45);z-index:10000;display:flex;align-items:center;justify-content:center;
-      opacity:0;pointer-events:none;transition:opacity .25s;
-    }
-      background:#fff;border-radius:16px;width:92%;max-width:520px;max-height:80vh;display:flex;flex-direction:column;
-      box-shadow:0 20px 60px rgba(0,0,0,0.25);transform:translateY(20px);transition:transform .25s;
-    }
-      flex:1;border:1.5px solid #ddd;border-radius:10px;padding:10px 12px;font-size:13px;resize:none;height:48px;font-family:inherit;outline:none;transition:border-color .2s;
-    }
     @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
   </style>
 </head>
@@ -142,7 +133,6 @@
           <select id="filterStatus" class="form-control" onchange="loadOrders()" style="width:auto;min-width:140px;">
             <option value="">全部状态</option>
             <option value="__empty__">- 待填写 -</option>
-            <option value="调货中">调货中</option>
             <option value="调货中">调货中</option>
             <option value="路途中">路途中</option>
             <option value="已到货">已到货</option>
@@ -539,7 +529,15 @@
           '已完结': 'status-completed'
         }[order.order_status] || '';
 
-        
+        html += `<tr>
+          <td><strong>${App.escapeHtml(order.invoice_no)}</strong></td>
+          <td>${order.order_date || '-'}</td>
+          <td style="min-width:200px;">${productsHtml}</td>
+          <td><strong>${order.quantity || '-'}</strong></td>
+          <td><span class="status-badge ${statusClass}">${order.order_status || '待填写'}</span></td>
+          <td>${App.escapeHtml(order.salesperson_name || '-')}</td>
+          <td>${order.shipping_date || '-'}</td>
+          <td>${order.tracking_no || '-'}</td>
           <td style="white-space:nowrap;font-size:12px;color:#999;">${App.formatDate(order.created_at)}</td>
           <td>
             <button class="btn btn-danger btn-sm" onclick="deleteOrder(${order.id})">删除</button>
@@ -956,36 +954,6 @@
       else { showToast('✅ 订单已更新！', 'success'); closeEditModal(); await loadOrders(); }
     }
 
-    
-
-    `;
-    }
-
-    
-
-    
-      let html = '';
-        const timeStr = new Date(m.created_at).toLocaleString('zh-CN', { month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' });
-        let roleLabel = '', cls = '';
-        if (isSelf) { roleLabel = '我'; cls = 'msg-self'; }
-      });
-      body.innerHTML = html;
-    }
-
-    
-      input.value = '';
-      const user = Auth.getUser();
-      const myRole = Auth.isSuper() ? 'super_admin' : 'admin';
-        author_role: myRole,
-        author_name: user.full_name || user.email,
-        content: content
-      });
-      if (error) { showToast('发送失败: ' + error.message, 'error'); input.value = content; return; }
-      showToast('✅ 已发送', 'success');
-    }
-
-    
-    });
   </script>
 
   <!-- 超管编辑弹窗 -->
@@ -996,9 +964,6 @@
         <button onclick="closeEditModal()" style="background:none;border:none;color:rgba(255,255,255,0.8);font-size:22px;cursor:pointer;">&times;</button>
       </div>
       <div id="orderEditModalBody" style="padding:22px;"></div>
-    </div>
-  </div>
-      </div>
     </div>
   </div>
 </body>

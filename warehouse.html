@@ -168,7 +168,6 @@
                   <th>到款单号</th><th style="cursor:pointer;user-select:none;white-space:nowrap;" onclick="toggleDateSort()">单据日期 <span id="whDateSortIcon" style="font-size:11px;color:#999;">↓ 降序</span></th><th style="min-width:200px;">产品明细</th>
                   <th>总数量</th><th>业务员</th>
                   <th style="color:#e07a5f;font-weight:600;">📅 预计发货时间</th>
-                  
                   <th>进度回复</th><th>拍照</th><th>是否带来</th><th>验货时间</th><th>收回时间</th><th style="min-width:70px;">操作</th>
                 </tr>
               </thead>
@@ -197,7 +196,7 @@
                 onblur="updateWarehouseNotes(${order.id}, this.value)" placeholder="进度回复">
             </td>
             <td style="text-align:center;">${order.photo_request ? '📸' : '-'}</td><td>${order.bring_goods === true ? '✅是' : order.bring_goods === false ? '❌否' : '-'}</td><td>${order.inspection_date || "-"}</td><td>${order.return_date || "-"}</td><td style="display:flex;gap:4px;flex-wrap:wrap;">
-              
+              ${fileBtn}
               <select class="form-control status-select" onchange="updateStatus(${order.id}, this.value)" style="width:80px;">
                 <option value="">- 待填写 -</option>
                 ${CONFIG.ORDER_STATUSES.map(s =>

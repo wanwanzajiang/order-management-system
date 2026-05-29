@@ -267,5 +267,103 @@ const API = {
       by_status: statusCounts,
       by_sales: salesOrders
     };
+  },
+
+  // ============================================
+  // 文件操作相关
+  // ============================================
+
+  /** 为订单附加文件元数据 */
+  async attachFileToOrder(orderId, fileInfo) {
+    const { data: order, error: fetchError } = await SUPABASE
+      .from('orders')
+      .select('file_ids')
+      .eq('id', orderId)
+      .single();
+
+    if (fetchError) return { error: fetchError };
+
+    const files = Array.isArray(order.file_ids) ? order.file_ids : [];
+    files.push({
+      ...fileInfo,
+      uploaded_at: new Date().toISOString()
+    });
+
+    const { data, error } = await SUPABASE
+      .from('orders')
+      .update({ file_ids: files })
+      .eq('id', orderId)
+      .select()
+      .single();
+
+    return { data, error };
+  },
+
+  /** 从订单移除文件元数据 */
+  async removeFileFromOrder(orderId, fileId) {
+    const { data: order, error: fetchError } = await SUPABASE
+      .from('orders')
+      .select('file_ids')
+      .eq('id', orderId)
+      .single();
+
+    if (fetchError) return { error: fetchError };
+
+    const files = Array.isArray(order.file_ids) 
+      ? order.file_ids.filter(f => f.id !== fileId) 
+      : [];
+
+    const { data, error } = await SUPABASE
+      .from('orders')
+      .update({ file_ids: files })
+      .eq('id', orderId)
+      .select()
+      .single();
+
+    return { data, error };
+  },
+
+  /** 替换订单中的文件元数据 */
+  async replaceFile(orderId, oldFileId, newFileInfo) {
+    const { data: order, error: fetchError } = await SUPABASE
+      .from('orders')
+      .select('file_ids')
+      .eq('id', orderId)
+      .single();
+
+    if (fetchError) return { error: fetchError };
+
+    const files = Array.isArray(order.file_ids) ? order.file_ids : [];
+    const index = files.findIndex(f => f.id === oldFileId);
+    
+    if (index !== -1) {
+      files[index] = {
+        ...newFileInfo,
+        uploaded_at: new Date().toISOString()
+      };
+    }
+
+    const { data, error } = await SUPABASE
+      .from('orders')
+      .update({ file_ids: files })
+      .eq('id', orderId)
+      .select()
+      .single();
+
+    return { data, error };
+  },
+
+  // ============================================
+  // 业务员识别码验证
+  // ============================================
+
+  /** 通过识别码获取业务员信息 */
+  async getSalespersonByCode(accessCode) {
+    const { data, error } = await SUPABASE
+      .from('salespeople')
+      .select('*')
+      .eq('access_code', accessCode.toUpperCase())
+      .maybeSingle();
+    return { data, error };
   }
 };

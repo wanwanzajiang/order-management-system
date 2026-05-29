@@ -64,31 +64,6 @@
     .pi-model { font-weight:600;color:#333; }
     .pi-qty { color:#e67e22;font-weight:500; }
     .pi-delivery { color:#aaa;font-size:11px;margin-left:auto; }
-
-      position:fixed;top:0;left:0;right:0;bottom:0;
-      background:rgba(0,0,0,0.45);z-index:10000;
-      display:flex;align-items:center;justify-content:center;
-      opacity:0;pointer-events:none;transition:opacity .25s;
-    }
-      background:#fff;border-radius:16px;width:92%;max-width:520px;max-height:80vh;
-      display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,0.25);
-      transform:translateY(20px);transition:transform .25s;
-    }
-      padding:16px 20px;background:linear-gradient(135deg,#667eea,#764ba2);
-      border-radius:16px 16px 0 0;display:flex;justify-content:space-between;align-items:center;
-    }
-      max-width:82%;padding:10px 14px;border-radius:12px;margin-bottom:10px;font-size:13px;line-height:1.5;
-    }
-      padding:14px 20px;border-top:1px solid #eee;display:flex;gap:8px;align-items:flex-end;
-    }
-      flex:1;border:1.5px solid #ddd;border-radius:10px;padding:10px 12px;
-      font-size:13px;resize:none;height:48px;font-family:inherit;outline:none;
-      transition:border-color .2s;
-    }
-      padding:10px 18px;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;
-      border:none;border-radius:10px;font-size:13px;cursor:pointer;font-weight:500;white-space:nowrap;
-      transition:transform .15s;
-    }
     @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
   </style>
 </head>
@@ -146,10 +121,6 @@
       <input type="text" id="codeInput" autocomplete="off" placeholder="例如 SP001" maxlength="20">
       <div class="modal-error" id="codeError"></div>
       <button class="btn btn-primary" onclick="verifyCode()" style="width:100%;padding:12px;font-size:15px;">确认进入</button>
-    </div>
-  </div>
-
-      </div>
     </div>
   </div>
 
@@ -255,7 +226,7 @@
                 '<label style="font-size:11px;color:#888;">拍照：<select onchange="sfUpdate(' + order.id + ',\'photo_request\',this.value)" style="font-size:12px;padding:2px;border-radius:4px;border:1px solid #ddd;"><option value="false"' + (!order.photo_request?' selected':'') + '>否</option><option value="true"' + (order.photo_request?' selected':'') + '>是</option></select></label>' +
                 '<label style="font-size:11px;color:#888;">验货：<input type="date" onchange="sfUpdate(' + order.id + ',\'inspection_date\',this.value||null)" value="' + (order.inspection_date||'') + '" style="font-size:12px;padding:2px;border-radius:4px;border:1px solid #ddd;width:120px;"></label>' +
                 '<label style="font-size:11px;color:#888;">收回：<input type="date" onchange="sfUpdate(' + order.id + ',\'return_date\',this.value||null)" value="' + (order.return_date||'') + '" style="font-size:12px;padding:2px;border-radius:4px;border:1px solid #ddd;width:120px;"></label>' +
-                '</div>' : ''}：${App.escapeHtml((order.warehouse_notes||'-').substring(0,20))}${(order.warehouse_notes||'').length>20?'...':''}</div>
+                '</div>' : ''}
             </div>
           </div>
           <div class="oc-actions">
@@ -282,47 +253,6 @@
       return`<span style="color:#555;font-size:12px;padding:8px;">${App.escapeHtml(pm)}</span>`;
     }
 
-    async `;
-
-
-    }
-
-    
-
-    
-
-      let html='';
-        const timeStr=new Date(m.created_at).toLocaleString('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'});
-        let roleLabel='',cls='';
-        if(isSelf){roleLabel='我';cls='msg-self';}
-
-          <div>${App.escapeHtml(m.content).replace(/\n/g,'<br>')}${unread}</div>
-          <div class="msg-meta">${roleLabel} · ${timeStr}</div>
-        </div>`;
-      });
-      body.innerHTML=html;
-    }
-
-    function isReadByMe(msg){return msg.is_read||(msg.author_role!=='sales'||true);}
-
-    async 
-
-      input.value='';
-      const user=Auth.getUser();
-        author_role:'sales',
-        author_name:(currentSp&&currentSp.name)||(user.full_name||user.email),
-        content:content
-      });
-
-      if(error){showToast('发送失败: '+error.message,'error');input.value=content;return;}
-      // 滚动到底部
-      setTimeout(()=>{
-      },50);
-
-      // 回车发送
-    }
-
-    
     async function sfUpdate(orderId, field, value) {
       if (value === '' || value === null || value === 'null') value = null;
       const upd = {}; upd[field] = value;
