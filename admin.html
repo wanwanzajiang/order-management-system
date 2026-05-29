@@ -255,20 +255,25 @@
     let productRowCount = 0;
 
     async function init() {
+      try {
       const user = Auth.getUser();
+      _currentRole = user.role;
+      App._currentRole = user.role;
       document.getElementById('userName').textContent = user.full_name || user.email;
       document.getElementById('userRole').textContent = App.getRoleName(user.role);
+      // 动态页脚
+      const roleName = App.getRoleName(user.role);
+      document.querySelector('footer span').innerHTML = '进度回复系统 · ' + roleName + '面板';
       if (user.role === CONFIG.ROLES.SUPER) {
         document.getElementById('superEntry').style.display = '';
       }
 
-      // 默认填今天日期
       document.getElementById('orderDate').value = new Date().toISOString().split('T')[0];
-
-      // 初始化时默认添加一行产品
       addProductRow();
-
       await loadDashboard();
+      } catch(e) {
+        document.body.innerHTML = '<div style=\"padding:40px;text-align:center;color:red;\">初始化错误: ' + e.message + '<br><pre>' + (e.stack||'') + '</pre></div>';
+      }
     }
 
     // ========== 动态产品行管理 ==========
