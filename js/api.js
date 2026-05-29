@@ -228,39 +228,30 @@ const API = {
   // 统计相关（基于业务员名字 + 订单状态）
   // ============================================
 
-  /** 获取订单统计数据 */
+  /** 获取订单统计数据（优化：一次查询替代12+次） */
   async getOrderStats() {
-    // 总订单数
-    const { count: total } = await SUPABASE
+    // 一次查询所有订单，前端统计
+    const { data: orders, error } = await SUPABASE
       .from('orders')
-      .select('*', { count: 'exact', head: true });
+      .select('order_status, salesperson_name');
 
-    // 各状态数量
-    const statuses = ['调货中', '路途中', '已到货', '已完结'];
-    const statusCounts = {};
-    for (const s of statuses) {
-      const { count } = await SUPABASE
-        .from('orders')
-        .select('*', { count: 'exact', head: true })
-        .eq('order_status', s);
-      statusCounts[s] = count || 0;
+    const total = orders ? orders.length : 0;
+    const statusCounts = { '调货中': 0, '路途中': 0, '已到货': 0, '已完结': 0 };
+    const salesCounts = {};
+
+    if (orders) {
+      orders.forEach(o => {
+        if (o.order_status) statusCounts[o.order_status] = (statusCounts[o.order_status] || 0) + 1;
+        if (o.salesperson_name) salesCounts[o.salesperson_name] = (salesCounts[o.salesperson_name] || 0) + 1;
+      });
     }
 
-    // 各业务员的订单数（从salespeople表取名字关联orders）
+    // 业务员列表（只需一次查询）
     const { data: salesData } = await this.getSalespeople();
-    const salesOrders = [];
-    if (salesData && salesData.length > 0) {
-      for (const sp of salesData) {
-        const { count } = await SUPABASE
-          .from('orders')
-          .select('*', { count: 'exact', head: true })
-          .eq('salesperson_name', sp.name);
-        salesOrders.push({
-          ...sp,
-          order_count: count || 0
-        });
-      }
-    }
+    const salesOrders = (salesData || []).map(sp => ({
+      ...sp,
+      order_count: salesCounts[sp.name] || 0
+    }));
 
     return {
       total: total || 0,
