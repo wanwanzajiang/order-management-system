@@ -96,13 +96,6 @@
     }
 
     async function loadSalespeopleFilter() {
-      try {
-        const stored = Auth.getSession();
-        if (stored?.access_token) {
-          const { data: { session: sb } } = await SUPABASE.auth.getSession();
-          if (!sb) await SUPABASE.auth.setSession({ access_token: stored.access_token, refresh_token: stored.access_token });
-        }
-      } catch(_) {}
       const { data, error } = await SUPABASE
         .from('orders')
         .select('salesperson_name');
@@ -126,17 +119,6 @@
     async function loadOrders() {
       const container = document.getElementById('ordersContainer');
       App.showLoading(container);
-
-      // 确保 Supabase 有 token
-      try {
-        const stored = Auth.getSession();
-        if (stored?.access_token) {
-          const { data: { session: sb } } = await SUPABASE.auth.getSession();
-          if (!sb) {
-            await SUPABASE.auth.setSession({ access_token: stored.access_token, refresh_token: stored.access_token });
-          }
-        }
-      } catch(_) { /* 如果 Supabase 还没初始化好就跳过 */ }
 
       let query = SUPABASE
         .from('orders')

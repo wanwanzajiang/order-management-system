@@ -390,13 +390,6 @@
     }
 
     async function loadDashboard() {
-      try {
-        const stored = Auth.getSession();
-        if (stored?.access_token) {
-          const { data: { session: sb } } = await SUPABASE.auth.getSession();
-          if (!sb) await SUPABASE.auth.setSession({ access_token: stored.access_token, refresh_token: stored.access_token });
-        }
-      } catch(_) {}
       const stats = await API.getOrderStats();
 
       document.querySelector('.stat-total .stat-number').textContent = stats.total;
