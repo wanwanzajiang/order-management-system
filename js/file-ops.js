@@ -154,10 +154,10 @@ const FileOps = {
     const user = Auth.getUser();
     const uploader = user?.full_name || user?.email || '';
 
-    // 用 Supabase 原生 session（自动续期）
-    const { data: { session } } = await SUPABASE.auth.getSession();
+    // 拿 token
+    const session = Auth.getSession();
     const token = session?.access_token || '';
-    if (!token) { App.showToast('登录已过期，请重新登录', 'error'); return; }
+    if (!token) { alert('登录已过期，请重新登录'); return; }
 
     const progressBar = document.getElementById('uploadProgress');
     const progressInner = progressBar?.querySelector('.bar');
@@ -239,7 +239,7 @@ const FileOps = {
 
     const user = Auth.getUser();
     const uploader = user?.full_name || user?.email || '';
-    const { data: { session } } = await SUPABASE.auth.getSession();
+    const session = Auth.getSession();
     const token = session?.access_token || '';
 
     if (!token) { App.showToast('登录已过期', 'error'); return; }
@@ -291,7 +291,7 @@ const FileOps = {
   async _deleteFile(orderId, fileId) {
     if (!confirm('确定要删除这个文件吗？')) return;
 
-    const { data: { session } } = await SUPABASE.auth.getSession();
+    const session = Auth.getSession();
     const token = session?.access_token || '';
 
     // 1. 从 Supabase 元数据移除
