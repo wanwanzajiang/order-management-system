@@ -1,42 +1,71 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
-<title>进度回复系统 - 登录</title>
-<link rel="stylesheet" href="css/style.css?v=2">
-<style>
-body{display:flex;align-items:center;justify-content:center;min-height:100vh;background:linear-gradient(135deg,#f5f0eb,#fdfbf7)}
-.login-box{background:#fff;padding:40px;border-radius:20px;box-shadow:0 10px 40px rgba(0,0,0,.08);width:380px;max-width:90vw}
-h2{text-align:center;color:#e07a5f;margin-bottom:8px}
-input{display:block;width:100%;padding:12px;margin:10px 0;border:1px solid #ddd;border-radius:10px;font-size:14px;box-sizing:border-box}
-button{width:100%;padding:12px;background:linear-gradient(135deg,#e07a5f,#d35400);color:#fff;border:none;border-radius:10px;font-size:16px;cursor:pointer;font-weight:600}
-.error{color:#e74c3c;font-size:13px;text-align:center;margin:8px 0;display:none}
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>订单管理系统 - 登录</title>
+  <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-<div class="login-box">
-<h2>📦 进度回复系统</h2>
-<p style="text-align:center;color:#888;font-size:13px;margin-bottom:16px">请登录</p>
-<div class="error" id="err"></div>
-<form id="frm">
-<input type="email" id="em" placeholder="邮箱" required>
-<input type="password" id="pw" placeholder="密码" required>
-<button type="submit" id="btn">登 录</button>
-</form>
-</div>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="js/config.js?v=2"></script>
-<script src="js/auth.js?v=2"></script>
-<script>
-if(Auth.isLoggedIn()) Auth.redirectByRole();
-document.getElementById('frm').addEventListener('submit',async e=>{
-  e.preventDefault();
-  const err=document.getElementById('err'),btn=document.getElementById('btn');
-  err.style.display='none'; btn.disabled=true; btn.textContent='登录中...';
-  const r=await Auth.login(document.getElementById('em').value.trim(),document.getElementById('pw').value);
-  if(r.success){btn.textContent='跳转中...';setTimeout(()=>Auth.redirectByRole(),300)}
-  else{err.textContent=r.error;err.style.display='block';btn.disabled=false;btn.textContent='登 录'}
-});
-</script>
+  <div class="login-container">
+    <div class="login-box">
+      <h2>📦 订单管理系统</h2>
+      <p style="text-align:center;color:#888;font-size:13px;margin-bottom:20px;">请使用管理员分配的账号登录</p>
+
+      <div id="loginError" class="login-error"></div>
+
+      <form id="loginForm">
+        <div class="form-group">
+          <label for="email">邮箱地址</label>
+          <input type="email" id="email" class="form-control" required autocomplete="email">
+        </div>
+        <div class="form-group">
+          <label for="password">密码</label>
+          <input type="password" id="password" class="form-control" required autocomplete="current-password">
+        </div>
+        <button type="submit" class="btn btn-primary">登 录</button>
+      </form>
+
+      <div style="text-align:center;margin-top:20px;padding-top:16px;border-top:1px solid #eee;">
+        <p style="font-size:12px;color:#aaa;">还没有账号？请联系管理员为您创建</p>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/config.js"></script>
+  <script src="js/auth.js"></script>
+  <script>
+    if (Auth.isLoggedIn()) {
+      Auth.redirectByRole();
+    }
+
+    document.getElementById('loginForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+      const errorEl = document.getElementById('loginError');
+
+      errorEl.style.display = 'none';
+      errorEl.textContent = '';
+
+      const btn = e.target.querySelector('button[type="submit"]');
+      btn.disabled = true;
+      btn.textContent = '登录中...';
+
+      const result = await Auth.login(email, password);
+
+      if (result.success) {
+        // 登录成功，跳转到对应页面
+        btn.textContent = '跳转中...';
+        setTimeout(() => Auth.redirectByRole(), 300);
+      } else {
+        errorEl.textContent = result.error || '登录失败';
+        errorEl.style.display = 'block';
+        btn.disabled = false;
+        btn.textContent = '登 录';
+      }
+    });
+  </script>
 </body>
 </html>

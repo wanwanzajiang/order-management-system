@@ -1,83 +1,271 @@
 const API = {
-  // 订单
-  async getOrders(filters = {}) {
-    let q = SUPABASE.from('orders').select('*').order('created_at', { ascending: false });
-    if (filters.status) q = q.eq('order_status', filters.status);
-    if (filters.salesperson) q = q.eq('salesperson_name', filters.salesperson);
-    const { data, error } = await q;
+  // ============================================
+  // 业务员姓名管理（独立于用户账号）
+  // ============================================
+  async getSalespeople() {
+    const { data, error } = await SUPABASE
+      .from('salespeople')
+      .select('*')
+      .eq('is_active', true)
+      .order('name', { ascending: true });
     return { data, error };
   },
 
-  async createOrder(order) {
-    return await SUPABASE.from('orders').insert(order).select().single();
+  async getAllSalespeople(includeInactive = false) {
+    let query = SUPABASE
+      .from('salespeople')
+      .select('*')
+      .order('created_at', { ascending: false });
+    if (!includeInactive) {
+      query = query.eq('is_active', true);
+    }
+    const { data, error } = await query;
+    return { data, error };
   },
 
-  async updateOrder(id, updates) {
-    return await SUPABASE.from('orders').update(updates).eq('id', id);
-  },
-
-  async deleteOrder(id) {
-    return await SUPABASE.from('orders').delete().eq('id', id);
-  },
-
-  async getOrderStats() {
-    const { data } = await SUPABASE.from('orders').select('order_status,salesperson_name');
-    if (!data) return { total: 0, by_status: {}, by_sales: [] };
-    const by_status = {}; const by_sales = {};
-    data.forEach(o => {
-      by_status[o.order_status] = (by_status[o.order_status] || 0) + 1;
-      by_sales[o.salesperson_name] = (by_sales[o.salesperson_name] || 0) + 1;
-    });
-    return {
-      total: data.length,
-      by_status,
-      by_sales: Object.entries(by_sales).map(([name, count]) => ({ name, count })).sort((a, b) => b.count - a.count)
-    };
-  },
-
-  // 业务员
-  async getSalespeople() {
-    const { data } = await SUPABASE.from('salespeople').select('*').eq('is_active', true).order('name');
-    return data || [];
-  },
-
-  async addSalesperson(name, access_code) {
-    return await SUPABASE.from('salespeople').insert({ name, access_code, is_active: true }).select().single();
+  async addSalesperson(spData) {
+    // 兼容旧调用方式：传字符串(name)或对象({name, access_code, ...})
+    const data = typeof spData === 'string'
+      ? { name: spData.trim(), is_active: true }
+      : { ...spData, is_active: spData.is_active !== false };
+    const { data: result, error } = await SUPABASE
+      .from('salespeople')
+      .insert(data)
+      .select()
+      .single();
+    return { data: result, error };
   },
 
   async updateSalesperson(id, updates) {
-    return await SUPABASE.from('salespeople').update(updates).eq('id', id);
+    const { data, error } = await SUPABASE
+      .from('salespeople')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+    return { data, error };
   },
 
-  // 用户
-  async getUsers() {
-    const { data } = await SUPABASE.from('user_profiles').select('id,email,role').order('email');
-    return data || [];
+  async deleteSalesperson(id) {
+    // 软删除：设为不活跃，保留历史订单关联
+    const { error } = await SUPABASE
+      .from('salespeople')
+      .update({ is_active: false })
+      .eq('id', id);
+    return { error };
   },
 
-  async updateUserRole(id, role) {
-    return await SUPABASE.from('user_profiles').update({ role }).eq('id', id);
+  // ============================================
+  // 订单相关（含新字段）
+  // ============================================
+  async getOrders(filters = {}) {
+    let query = SUPABASE
+      .from('orders')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (filters.invoice_no) {
+      query = query.eq('invoice_no', filters.invoice_no);
+    }
+    if (filters.salesperson_name) {
+      query = query.eq('salesperson_name', filters.salesperson_name);
+    }
+    if (filters.order_status) {
+      query = query.eq('order_status', filters.order_status);
+    }
+
+    const { data, error } = await query;
+    return { data, error };
   },
 
-  // 文件
-  async attachFile(orderId, meta) {
-    const { data: order } = await SUPABASE.from('orders').select('file_ids').eq('id', orderId).single();
-    const files = Array.isArray(order?.file_ids) ? [...order.file_ids] : [];
-    files.push({ ...meta, uploaded_at: new Date().toISOString() });
-    return await SUPABASE.from('orders').update({ file_ids: files }).eq('id', orderId);
+  async getOrderByInvoice(invoiceNo) {
+    const { data, error } = await SUPABASE
+      .from('orders')
+      .select('*')
+      .eq('invoice_no', invoiceNo)
+      .single();
+    return { data, error };
   },
 
-  async replaceFile(orderId, oldId, meta) {
-    const { data: order } = await SUPABASE.from('orders').select('file_ids').eq('id', orderId).single();
-    let files = Array.isArray(order?.file_ids) ? order.file_ids : [];
-    files = files.filter(f => (typeof f === 'string' ? f : f.id) !== oldId);
-    files.push({ ...meta, uploaded_at: new Date().toISOString() });
-    return await SUPABASE.from('orders').update({ file_ids: files }).eq('id', orderId);
+  async createOrder(orderData) {
+    const { data, error } = await SUPABASE
+      .from('orders')
+      .insert({
+        invoice_no: orderData.invoice_no,
+        product_model: orderData.product_model,
+        brand: orderData.brand || null,
+        quantity: orderData.quantity || 1,
+        order_date: orderData.order_date || null,
+        delivery_date: orderData.delivery_date || null,
+        // 状态默认为空，由仓库填写
+        order_status: orderData.order_status || null,
+        salesperson_name: orderData.salesperson_name,
+        sales_notes: orderData.sales_notes || '',
+        sales_id: null
+      })
+      .select()
+      .single();
+    return { data, error };
   },
 
-  async removeFile(orderId, fileId) {
-    const { data: order } = await SUPABASE.from('orders').select('file_ids').eq('id', orderId).single();
-    const files = Array.isArray(order?.file_ids) ? order.file_ids.filter(f => (typeof f === 'string' ? f : f.id) !== fileId) : [];
-    return await SUPABASE.from('orders').update({ file_ids: files }).eq('id', orderId);
+  async updateOrder(id, updates) {
+    const { data, error } = await SUPABASE
+      .from('orders')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+    return { data, error };
+  },
+
+  async deleteOrder(id) {
+    const { error } = await SUPABASE
+      .from('orders')
+      .delete()
+      .eq('id', id);
+    return { error };
+  },
+
+  // ============================================
+  // 用户管理（管理员用 - 轻量版）
+  // ============================================
+
+  /** 获取所有用户 */
+  async getAllUsers() {
+    const { data, error } = await SUPABASE
+      .from('user_profiles')
+      .select('*')
+      .order('created_at', { ascending: false });
+    return { data, error };
+  },
+
+  /** 更新用户信息 — 修复：去掉.select().single()避免 "Cannot coerce" 错误 */
+  async updateUserProfile(userId, updates) {
+    const { data, error } = await SUPABASE
+      .from('user_profiles')
+      .update(updates)
+      .eq('id', userId);
+    return { data, error };
+  },
+
+  /** 更新用户角色 */
+  async updateUserRole(userId, role) {
+    return this.updateUserProfile(userId, { role });
+  },
+
+  /** 更新用户姓名 */
+  async updateUserName(userId, fullName) {
+    return this.updateUserProfile(userId, { full_name: fullName });
+  },
+
+  // ============================================
+  // 订单留言系统
+  // ============================================
+
+  /** 获取某订单的全部留言（按时间正序） */
+  async getMessages(orderId) {
+    const { data, error } = await SUPABASE
+      .from('order_messages')
+      .select('*')
+      .eq('order_id', orderId)
+      .order('created_at', { ascending: true });
+    return { data: data || [], error };
+  },
+
+  /** 发送留言 */
+  async addMessage(msg) {
+    const { data, error } = await SUPABASE
+      .from('order_messages')
+      .insert({
+        order_id: msg.order_id,
+        author_role: msg.author_role,
+        author_name: msg.author_name,
+        content: msg.content,
+        is_read: false
+      })
+      .select()
+      .single();
+    return { data, error };
+  },
+
+  /** 标记某订单的指定角色留言为已读 */
+  async markMessagesRead(orderId, targetRole) {
+    const { error } = await SUPABASE
+      .from('order_messages')
+      .update({ is_read: true })
+      .eq('order_id', orderId)
+      .eq('author_role', targetRole)
+      .eq('is_read', false);
+    return { error };
+  },
+
+  /** 批量获取多个订单的未读留言数 */
+  async getUnreadCounts(orderIds) {
+    if (!orderIds || orderIds.length === 0) return {};
+    const { data, error } = await SUPABASE
+      .from('order_messages')
+      .select('order_id')
+      .eq('is_read', false)
+      .in('order_id', orderIds);
+    if (error || !data) return {};
+    const counts = {};
+    data.forEach(m => {
+      counts[m.order_id] = (counts[m.order_id] || 0) + 1;
+    });
+    return counts;
+  },
+
+  /** 删除留言（超管/管理员用） */
+  async deleteMessage(msgId) {
+    const { error } = await SUPABASE
+      .from('order_messages')
+      .delete()
+      .eq('id', msgId);
+    return { error };
+  },
+
+  // ============================================
+  // 统计相关（基于业务员名字 + 订单状态）
+  // ============================================
+
+  /** 获取订单统计数据 */
+  async getOrderStats() {
+    // 总订单数
+    const { count: total } = await SUPABASE
+      .from('orders')
+      .select('*', { count: 'exact', head: true });
+
+    // 各状态数量
+    const statuses = ['调货中', '路途中', '已到货', '已完结'];
+    const statusCounts = {};
+    for (const s of statuses) {
+      const { count } = await SUPABASE
+        .from('orders')
+        .select('*', { count: 'exact', head: true })
+        .eq('order_status', s);
+      statusCounts[s] = count || 0;
+    }
+
+    // 各业务员的订单数（从salespeople表取名字关联orders）
+    const { data: salesData } = await this.getSalespeople();
+    const salesOrders = [];
+    if (salesData && salesData.length > 0) {
+      for (const sp of salesData) {
+        const { count } = await SUPABASE
+          .from('orders')
+          .select('*', { count: 'exact', head: true })
+          .eq('salesperson_name', sp.name);
+        salesOrders.push({
+          ...sp,
+          order_count: count || 0
+        });
+      }
+    }
+
+    return {
+      total: total || 0,
+      by_status: statusCounts,
+      by_sales: salesOrders
+    };
   }
 };
