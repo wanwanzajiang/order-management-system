@@ -543,7 +543,7 @@
           <td style="white-space:nowrap;font-size:12px;color:#999;">${App.formatDate(order.created_at)}</td>
           <td>
             <button class="btn btn-danger btn-sm" onclick="deleteOrder(${order.id})">删除</button>
-            ${Auth.isSuper() ? `<button class="btn btn-sm" style="background:#667eea;color:#fff;border-color:#667eea;margin-left:4px;" onclick="openOrderEditor(${order.id})">✏️ 编辑</button>` : ''}
+            <button class="btn btn-sm" style="background:#667eea;color:#fff;border-color:#667eea;margin-left:4px;" onclick="openOrderEditor(${order.id})">✏️ 编辑</button>
           </td>
         </tr>`;
       });
