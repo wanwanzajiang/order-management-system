@@ -35,6 +35,7 @@ const App = {
 
   getRoleName(role) {
     const nameMap = {
+      'super_admin': '超级管理员',
       'admin': '管理员',
       'warehouse': '仓库人员',
       'sales': '业务员'

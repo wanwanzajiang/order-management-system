@@ -318,13 +318,10 @@
     }
 
     async function updateWarehouseNotes(id, notes) {
-    async     function updateWarehouseNotes(id, notes) {
       const { error } = await API.updateOrder(id, { warehouse_notes: notes });
-      if (error) showToast('备注保存失败: ' + error.message, 'error');
+      if (error) showToast('进度回复保存失败: ' + error.message, 'error');
     }
 
     // 当前用户角色（供 FileOps 使用）
     let _currentRole = '';
   </script>
-</body>
-</html>

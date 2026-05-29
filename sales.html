@@ -70,6 +70,8 @@
       if (error||!data){errEl.textContent='❌ 识别码无效，请检查后重新输入';return;}
       if (data.is_active===false){errEl.textContent='⛔ 该业务员已被停用，请联系管理员';return;}
       currentSp={id:data.id,name:data.name,access_code:data.access_code};
+      _currentRole = 'sales';
+      App._currentRole = 'sales';
       sessionStorage.setItem('current_salesperson',JSON.stringify(currentSp));
       hideModal();showIdentityBar();showToast(`✅ 欢迎，${currentSp.name}！`,'success');showWelcome();
     }

@@ -1,34 +1,27 @@
-# 进度回复系统 - 项目关联信息
+# 进度回复系统 - 关联信息（唯一真相来源）
 
-## GitHub
-- 仓库: wanwanzajiang/order-management-system
-- 用户: wanwanzajiang (不是 chachaer815!)
-- 部署: https://wanwanzajiang.github.io/order-management-system/
-
-## Supabase (新项目 - 主用)
-- 名称: wanwanzi
-- ID: nlcudhwgnoljaxmzdiki
-- URL: https://nlcudhwgnoljaxmzdiki.supabase.co
-- 区域: us-west-2
-- DB密码: 已脱敏
-- Management API token: sbp_xxxx（已脱敏）
-- 状态: 数据库不稳定，待激活后再用
-
-## Supabase (备用 - 当前在用)
+## 就一个 Supabase 项目在用
+- 名称: "wanwanzajiang's Project"
 - ID: omhtrpqdxdwbmwfdkgeg
 - URL: https://omhtrpqdxdwbmwfdkgeg.supabase.co
+- 状态: ✅ 正常工作中
 
-## 腾讯云开发
-- 环境: wanwan-d2gafa9gobac0b79b
-- 用途: 文件存储 + CDN（照片/视频）
+## 就一个 GitHub
+- 仓库: wanwanzajiang/order-management-system
+- 用户: wanwanzajiang
+- 部署: https://wanwanzajiang.github.io/order-management-system
 
-## 用户账号
-- 超级管理员: wan@zijiang.com / msrrywanwan
-- 管理员: admin@zijiang.com / xlfhxydr
-- 仓库: cangku@zijiang.com / xwtlzwwf
-- 业务员: yewuyuan@zijiang.com / fqdyzjhc
+## 就一个云开发环境
+- 环境ID: wanwan-d2gafa9gobac0b79b
+- 用途: 文件存储+CDN（待集成）
 
-## 当前架构
-- 前端: GitHub Pages + 纯静态HTML
-- 后端: Supabase Auth + PostgreSQL
-- 存储: 腾讯云开发（待集成）
+## 四个用户账号
+| 角色 | 邮箱 | 密码 |
+|------|------|------|
+| 超级管理员 | wan@zijiang.com | msrrywanwan |
+| 管理员 | admin@zijiang.com | xlfhxydr |
+| 仓库 | cangku@zijiang.com | xwtlzwwf |
+| 业务员 | yewuyuan@zijiang.com | fqdyzjhc |
+
+## 架构
+前端(GitHub Pages) → Supabase(Auth+DB) + 云开发(存储)

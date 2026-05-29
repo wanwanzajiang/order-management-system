@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="css/file-panel.css">
   <style>
-    .console-nav{display:flex;gap:4px;flex-wrap wrap;padding:12px 16px;background:linear-gradient(135deg,#1a1a2e 0%,#16213e 50%,#0f3460 100%);border-radius:10px;margin-bottom:18px;align-items:center;}
+    .console-nav{display:flex;gap:4px;flex-wrap:wrap;padding:12px 16px;background:linear-gradient(135deg,#1a1a2e 0%,#16213e 50%,#0f3460 100%);border-radius:10px;margin-bottom:18px;align-items:center;}
     .c-tab{padding:8px 18px;border:none;background:rgba(255,255,255,0.08);color:#aaa;cursor:pointer;border-radius:6px;font-size:13px;transition:all .2s;}
     .c-tab.active{background:#667eea;color:#fff;font-weight:600;box-shadow:0 2px 12px rgba(102,126,234,.4);}
     .c-tab:hover:not(.active){background:rgba(255,255,255,0.15);color:#fff;}
@@ -199,7 +199,7 @@
         const rl={super_admin:'超级管理员',admin:'管理员',warehouse:'仓库人员',sales:'业务员'}[u.role]||u.role;
         h+=`<tr><td style="font-family:monospace;font-size:10px;color:#aaa;">${u.id.substring(0,8)}...</td><td>${App.escapeHtml(u.email)}</td><td>${App.escapeHtml(u.full_name||'-')}</td><td><span class="role-badge-s ${rn}">${rl}</span></td><td style="font-size:11px;color:#999;">${App.formatDate(u.created_at)}</td><td>`;
         if(u.role!=='super_admin'){
-          h+=`<select onchange="changeUserRole('${u.id}',this.value)" style="font-size:11px;padding:2px 6px;"><option value="" disabled ${u.role===u.value?'selected':''}>改角色</option><option value="admin" ${u.role==='admin'?'selected':''}>管理员</option><option value="warehouse" ${u.role==='warehouse'?'selected':''}>仓库</option><option value="sales" ${u.role==='sales'?'selected':''}>业务员</option></select>`;
+          h+=`<select onchange="changeUserRole('${u.id}',this.value)" style="font-size:11px;padding:2px 6px;"><option value="" disabled ${u.role===u.role?'selected':''}>改角色</option><option value="admin" ${u.role==='admin'?'selected':''}>管理员</option><option value="warehouse" ${u.role==='warehouse'?'selected':''}>仓库</option><option value="sales" ${u.role==='sales'?'selected':''}>业务员</option></select>`;
         } else {
           h+=`<span style="font-size:11px;color:#aaa;">🔒 不可更改</span>`;
         }
@@ -234,7 +234,7 @@
       const area=document.getElementById('editOrderArea');
       area.innerHTML='<p style="text-align:center;color:#999;padding:20px;">加载中...</p>';
       const order=allOrders.find(o=>String(o.id)===oid);
-      if(!order){area.innerHTML='<p style="text-align:red;color:#f87171;">未找到订单数据</p>';return;}
+      if(!order){area.innerHTML='<p style="color:red;color:#f87171;">未找到订单数据</p>';return;}
       renderEditForm(order);
     }
 
@@ -265,9 +265,7 @@
     <div class="form-group-c"><label>预计发货时间</label><input type="date" id="e_shipping_date" value="${order.shipping_date||''}" style="width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:6px;"></div>
   </div>
   <div class="form-row-c">
-    <div class="form-group-c"><label></label><input type="text" id="e_" value="${App.escapeHtml(order.||'')}" style="width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:6px;"></div>
     <div class="form-group-c"><label>进度回复</label><input type="text" id="e_warehouse_notes" value="${App.escapeHtml(order.warehouse_notes||'')}" style="width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:6px;"></div>
-    <div class="form-group-c"><label>业务备注</label><input type="text" id="e_" value="${App.escapeHtml(order.||'')}" style="width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:6px;"></div>
   </div>
 
   <div class="prod-edit-area">
@@ -413,7 +411,6 @@
     async function loadCMsgs(orderId) {
       const listEl = document.getElementById('cmsgList');
       const countEl = document.getElementById('cmsgCount');
-      const { data: msgs } = await API.getMessages(orderId);
       if (!msgs || msgs.length === 0) {
         listEl.innerHTML = '<p style="color:#bbb;text-align:center;padding:12px;font-size:12px;">暂无留言</p>';
         countEl.textContent = '';
@@ -441,7 +438,6 @@
       if (!content) return;
       input.value = '';
       const user = Auth.getUser();
-      const { error } = await API.addMessage({
         order_id: orderId,
         author_role: 'super_admin',
         author_name: user.full_name || user.email,
@@ -455,16 +451,12 @@
 
     async function deleteCMsg(msgId, orderId) {
       if (!confirm('确定删除此条留言？')) return;
-      const { error } = await API.deleteMessage(msgId);
       if (error) { showToast('删除失败', 'error'); return; }
       log(`删除了留言 #${msgId}`, 'w');
       loadCMsgs(orderId);
     }
 
     async function markAllReadC(orderId) {
-      await API.markMessagesRead(orderId, 'sales');
-      await API.markMessagesRead(orderId, 'warehouse');
-      await API.markMessagesRead(orderId, 'admin');
       showToast('✅ 全部标为已读', 'success');
       loadCMsgs(orderId);
     }
