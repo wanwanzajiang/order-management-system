@@ -204,7 +204,9 @@ const FileOps = {
         }
 
       } catch (e) {
-        App.showToast(`上传失败 ${file.name}: ${e.message}`, 'error');
+        const msg = `上传失败 ${file.name}: ${e.message}`;
+        try { App.showToast(msg, 'error'); } catch(_) {}
+        alert(msg);
       }
     }
 

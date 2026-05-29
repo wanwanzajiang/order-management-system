@@ -97,17 +97,15 @@
     }
 
     async function loadSalespeopleFilter() {
-      const { data, error } = await API.getSalespeople();
+      const { data, error } = await SUPABASE
+        .from('orders')
+        .select('salesperson_name');
+      if (error || !data) return;
+      const names = [...new Set(data.map(o => o.salesperson_name).filter(Boolean))].sort();
       const sel = document.getElementById('filterSp');
-      if (error) {
-        sel.innerHTML += '<option value="">⚠️加载失败</option>';
-        return;
-      }
-      if (data && data.length > 0) {
-        data.forEach(sp => {
-          sel.innerHTML += `<option value="${App.escapeHtml(sp.name)}">${App.escapeHtml(sp.name)}</option>`;
-        });
-      }
+      names.forEach(name => {
+        sel.innerHTML += `<option value="${App.escapeHtml(name)}">${App.escapeHtml(name)}</option>`;
+      });
     }
 
     let whDateSortAsc = false;
