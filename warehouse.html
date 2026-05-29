@@ -39,7 +39,7 @@
           <option value="已完结">已完结</option>
         </select>
         <label style="font-weight:500;color:#555;margin-left:12px;">🔍 到款单号：</label>
-        <input type="text" id="filterInvoice" class="form-control" placeholder="输入单号搜索" style="width:180px;" onkeydown="if(event.key==='Enter')loadOrders()">
+        <input type="text" id="filterInvoice" class="form-control" style="width:180px;" onkeydown="if(event.key==='Enter')loadOrders()">
         <label style="margin-left:8px;font-size:12px;display:flex;align-items:center;gap:3px;cursor:pointer;white-space:nowrap;" onchange="loadOrders()"><input type="checkbox" id="chkPhoto" style="cursor:pointer;"> 需拍照</label>
         <label style="font-size:12px;display:flex;align-items:center;gap:3px;cursor:pointer;white-space:nowrap;" onchange="loadOrders()"><input type="checkbox" id="chkBring" style="cursor:pointer;"> 需带来</label>
         <label style="font-size:12px;display:flex;align-items:center;gap:3px;cursor:pointer;white-space:nowrap;" onchange="loadOrders()"><input type="checkbox" id="chkPendingShot" style="cursor:pointer;"> 📸 待拍照</label>
@@ -172,7 +172,7 @@
         <td>
           <input type="text" class="notes-input warehouse-notes"
             value="${App.escapeHtml(order.warehouse_notes || '')}"
-            onblur="updateWarehouseNotes(${order.id}, this.value)" placeholder="进度回复">
+            onblur="updateWarehouseNotes(${order.id}, this.value)">
         </td>
         <td style="text-align:center;">${order.photo_request ? '📸' : '-'}</td>
         <td>${order.bring_goods === true ? '✅是' : order.bring_goods === false ? '❌否' : '-'}</td>

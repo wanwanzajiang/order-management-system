@@ -56,7 +56,7 @@ const FileOps = {
     else files.forEach(f => {
       const t = f.type||this._type(f.name||'');
       html += `<div class="file-item"><span>${this._icon(t)}</span> ${App.escapeHtml(f.name||'文件')} <small>${this._size(f.size)} · ${this._time(f.uploaded_at)}</small>
-        <button onclick="window.open('${this._url(f.id)}')">⬇</button>
+        <a href="${this._url(f.id)}" download="${App.escapeHtml(f.name||'文件')}" style="padding:4px 8px;border:1px solid #ddd;border-radius:6px;text-decoration:none;font-size:14px;">⬇</a>
         ${up?`<button onclick="FileOps._replace('${f.id}')">🔄</button>`:''}
         ${up?`<button onclick="FileOps._del(${orderId},'${f.id}')">🗑</button>`:''}
       </div>`;
