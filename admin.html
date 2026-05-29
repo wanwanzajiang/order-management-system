@@ -65,7 +65,7 @@
     <!-- Tab 导航 -->
     <div class="tab-nav" id="tabNav">
       <button class="tab-btn active" data-tab="dashboard" onclick="switchTab('dashboard')">📊 数据概览</button>
-      <button class="tab-btn" data-tab="orders" onclick="switchTab('orders')">📋 进度回复</button>
+      <button class="tab-btn" data-tab="orders" onclick="switchTab('orders')">📋 订单新增</button>
       <button class="tab-btn" data-tab="salespeople" onclick="switchTab('salespeople')">👥 业务员管理</button>
     </div>
 
@@ -706,7 +706,10 @@
               ${!isActive ? 'disabled style="background:#f5f5f5;color:#999;"' : ''}>
           </td>
           <td>
-            <span style="font-family:monospace;font-size:12px;background:#e8f0fe;color:#1a56db;padding:2px 8px;border-radius:4px;">${App.escapeHtml(sp.access_code || '-')}</span>
+            <input type="text" class="inline-edit" id="spcode-${sp.id}"
+              value="${App.escapeHtml(sp.access_code || '')}"
+              style="width:100px;padding:4px 8px;border:1px solid #ddd;border-radius:4px;"
+              ${!isActive ? 'disabled style="background:#f5f5f5;color:#999;"' : ''}>
           </td>
           <td>
             <span class="status-badge" style="
@@ -774,14 +777,18 @@
     // 保存业务员改名
     async function saveSpName(id) {
       const input = document.getElementById('spname-' + id);
+      const codeInput = document.getElementById('spcode-' + id);
       const newName = input.value.trim();
+      const newCode = codeInput ? codeInput.value.trim().toUpperCase() : '';
 
       if (!newName) {
         showToast('姓名不能为空', 'error');
         return;
       }
 
-      const { error } = await API.updateSalesperson(id, { name: newName });
+      const updates = { name: newName };
+      if (newCode) updates.access_code = newCode;
+      const { error } = await API.updateSalesperson(id, updates);
 
       if (error) {
         if (error.message && error.message.includes('unique')) {
