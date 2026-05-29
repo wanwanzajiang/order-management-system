@@ -38,10 +38,8 @@
           <option value="已到货">已到货</option>
           <option value="已完结">已完结</option>
         </select>
-        <label style="font-weight:500;color:#555;margin-left:12px;">业务员：</label>
-        <select id="filterSp" class="form-control" style="width:auto;min-width:120px;" onchange="loadOrders()">
-          <option value="">全部</option>
-        </select>
+        <label style="font-weight:500;color:#555;margin-left:12px;">🔍 到款单号：</label>
+        <input type="text" id="filterInvoice" class="form-control" placeholder="输入单号搜索" style="width:180px;" onkeydown="if(event.key==='Enter')loadOrders()">
         <button class="btn btn-secondary btn-sm" onclick="loadOrders()" style="margin-left:auto;">🔄 刷新</button>
       </div>
 
@@ -88,28 +86,7 @@
       _currentRole = user.role;
       document.getElementById('userName').textContent = user.full_name || user.email;
       document.getElementById('userRole').textContent = App.getRoleName(user.role);
-      await loadSalespeopleFilter();
-      await loadOrders(); // 默认显示"调货中"
-    }
-
-    async function loadSalespeopleFilter() {
-      const sel = document.getElementById('filterSp');
-      try {
-        // 方式1：通过 API 封装
-        const { data } = await API.getSalespeople();
-        if (data && data.length > 0) {
-          data.forEach(sp => sel.innerHTML += `<option value="${App.escapeHtml(sp.name)}">${App.escapeHtml(sp.name)}</option>`);
-          return;
-        }
-      } catch(e) { console.warn('API.getSalespeople 失败，尝试直接查询:', e.message); }
-
-      // 方式2：直接查 Supabase（兜底）
-      try {
-        const { data: spList } = await SUPABASE.from('salespeople').select('name').eq('is_active', true).order('name');
-        if (spList && spList.length > 0) {
-          spList.forEach(sp => sel.innerHTML += `<option value="${App.escapeHtml(sp.name)}">${App.escapeHtml(sp.name)}</option>`);
-        }
-      } catch(e2) { console.error('业务员筛选全部加载失败:', e2); }
+      await loadOrders();
     }
 
     let whDateSortAsc = false;
@@ -132,13 +109,13 @@
         .order('created_at', { ascending: false });
 
       const statusFilter = document.getElementById('filterStatus').value;
-      const spFilter = document.getElementById('filterSp').value;
+      const invoiceFilter = document.getElementById('filterInvoice').value.trim();
       if (statusFilter === '__empty__') {
         query = query.is('order_status', null);
       } else if (statusFilter) {
         query = query.eq('order_status', statusFilter);
       }
-      if (spFilter) query = query.eq('salesperson_name', spFilter);
+      if (invoiceFilter) query = query.ilike('invoice_no', `%${invoiceFilter}%`);
 
       const { data, error } = await query;
 
