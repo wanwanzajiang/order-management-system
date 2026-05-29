@@ -93,12 +93,16 @@
     }
 
     async function loadSalespeopleFilter() {
-      const { data } = await SUPABASE.from('salespeople').select('name').eq('is_active', true).order('name');
-      const sel = document.getElementById('filterSp');
-      if (data && data.length > 0) {
-        data.forEach(sp => {
-          sel.innerHTML += `<option value="${App.escapeHtml(sp.name)}">${App.escapeHtml(sp.name)}</option>`;
-        });
+      try {
+        const { data } = await API.getSalespeople();
+        const sel = document.getElementById('filterSp');
+        if (data && data.length > 0) {
+          data.forEach(sp => {
+            sel.innerHTML += `<option value="${App.escapeHtml(sp.name)}">${App.escapeHtml(sp.name)}</option>`;
+          });
+        }
+      } catch(e) {
+        console.error('加载业务员筛选失败:', e);
       }
     }
 

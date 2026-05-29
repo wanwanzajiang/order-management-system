@@ -176,21 +176,48 @@
     }
 
     // ======== Accounts ========
+    const ADMIN_FN = `${CONFIG.SUPABASE_URL}/functions/v1/admin-ops`;
+
+    async function callAdminFn(body) {
+      const session = Auth.getSession();
+      if (!session) { showToast('请重新登录', 'error'); return null; }
+      const res = await fetch(ADMIN_FN, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
+        body: JSON.stringify(body)
+      });
+      const data = await res.json();
+      if (!res.ok) { showToast(data.error || '操作失败', 'error'); return null; }
+      return data;
+    }
+
     async function loadAccounts(){
       const c=document.getElementById('tab-accounts');
       c.innerHTML='<div class="c-card"><h3>👤 全部账号</h3><p style="color:#999;">加载中...</p></div>';
       try{
       const r=await API.getAllUsers();
       const users=r.data||[];
-      let h=`<div class="c-card"><h3>👤 全部账号 (${users.length})</h3><table class="user-table"><tr><th>ID</th><th>邮箱</th><th>姓名</th><th>角色</th><th>创建时间</th><th>操作</th></tr>`;
+      let h=`<div class="c-card"><h3>👤 全部账号 (${users.length})</h3>
+        <div style="margin-bottom:16px;padding:14px;background:#f0f4ff;border-radius:10px;border:1px dashed #99aaff;">
+          <h4 style="margin:0 0 10px 0;font-size:14px;">➕ 创建新账号</h4>
+          <form id="createUserForm" onsubmit="createAccount(event)" style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end;">
+            <div style="flex:1;min-width:140px;"><label style="font-size:11px;color:#666;">邮箱</label><input type="email" id="newEmail" required style="width:100%;padding:6px 8px;border:1px solid #ddd;border-radius:5px;font-size:12px;"></div>
+            <div style="flex:1;min-width:100px;"><label style="font-size:11px;color:#666;">密码</label><input type="text" id="newPassword" required minlength="6" style="width:100%;padding:6px 8px;border:1px solid #ddd;border-radius:5px;font-size:12px;"></div>
+            <div style="width:110px;"><label style="font-size:11px;color:#666;">角色</label><select id="newRole" style="width:100%;padding:6px 8px;border:1px solid #ddd;border-radius:5px;font-size:12px;"><option value="admin">管理员</option><option value="warehouse">仓库人员</option><option value="sales">业务员</option></select></div>
+            <button type="submit" class="btn btn-primary btn-sm">创建</button>
+          </form>
+        </div>
+        <table class="user-table"><tr><th>ID</th><th>邮箱</th><th>姓名</th><th>角色</th><th>创建时间</th><th>操作</th></tr>`;
       users.forEach(u=>{
         const rn={super_admin:'role-super',admin:'role-admin',warehouse:'role-wh',sales:'role-sales'}[u.role]||'';
         const rl={super_admin:'超级管理员',admin:'管理员',warehouse:'仓库人员',sales:'业务员'}[u.role]||u.role;
-        h+=`<tr><td style="font-family:monospace;font-size:10px;color:#aaa;">${u.id.substring(0,8)}...</td><td>${App.escapeHtml(u.email)}</td><td>${App.escapeHtml(u.full_name||'-')}</td><td><span class="role-badge-s ${rn}">${rl}</span></td><td style="font-size:11px;color:#999;">${App.formatDate(u.created_at)}</td><td>`;
+        h+=`<tr><td style="font-family:monospace;font-size:10px;color:#aaa;">${u.id.substring(0,8)}...</td><td>${App.escapeHtml(u.email)}</td><td>${App.escapeHtml(u.full_name||'-')}</td><td><span class="role-badge-s ${rn}">${rl}</span></td><td style="font-size:11px;color:#999;">${App.formatDate(u.created_at)}</td><td style="display:flex;gap:4px;flex-wrap:wrap;">`;
         if(u.role!=='super_admin'){
-          h+=`<select onchange="changeUserRole('${u.id}',this.value)" style="font-size:11px;padding:2px 6px;"><option value="" disabled ${u.role===u.value?'selected':''}>改角色</option><option value="admin" ${u.role==='admin'?'selected':''}>管理员</option><option value="warehouse" ${u.role==='warehouse'?'selected':''}>仓库</option><option value="sales" ${u.role==='sales'?'selected':''}>业务员</option></select>`;
+          h+=`<select onchange="changeUserRole('${u.id}',this.value)" style="font-size:11px;padding:2px 6px;border-radius:4px;"><option value="">角色</option><option value="admin" ${u.role==='admin'?'selected':''}>管理员</option><option value="warehouse" ${u.role==='warehouse'?'selected':''}>仓库</option><option value="sales" ${u.role==='sales'?'selected':''}>业务员</option></select>
+            <button class="btn btn-xs" style="background:#fff3e0;color:#e65100;border:1px solid #ffe0b2;" onclick="resetPassword('${u.id}')">🔑 改密</button>
+            <button class="btn btn-xs" style="background:#fee;color:#c00;border:1px solid #fcc;" onclick="deleteAccount('${u.id}','${App.escapeHtml(u.email)}')">🗑 删除</button>`;
         } else {
-          h+=`<span style="font-size:11px;color:#aaa;">🔒 不可更改</span>`;
+          h+=`<span style="font-size:11px;color:#aaa;">🔒 超管</span>`;
         }
         h+='</td></tr>';
       });
@@ -199,7 +226,33 @@
       }catch(e){console.error('[Console] loadAccounts error:',e);c.innerHTML='<div class="c-card"><h3>⚠️ 加载失败</h3><p style="color:#f87171;">账号列表加载异常: '+String(e.message||e)+'</p></div>';}
     }
 
+    async function createAccount(e){
+      e.preventDefault();
+      const email=document.getElementById('newEmail').value.trim();
+      const password=document.getElementById('newPassword').value;
+      const role=document.getElementById('newRole').value;
+      if(!email||!password){showToast('邮箱和密码必填','error');return;}
+      if(password.length<6){showToast('密码至少6位','error');return;}
+      const result=await callAdminFn({action:'create-user',email,password,role});
+      if(result){showToast('✅ 账号已创建','success');log(`创建账号 ${email}`,'s');loadAccounts();}
+    }
+
+    async function deleteAccount(uid,email){
+      if(!confirm(`⚠️ 确定删除账号「${email}」？此操作不可恢复！`))return;
+      const result=await callAdminFn({action:'delete-user',user_id:uid});
+      if(result){showToast('✅ 账号已删除','success');log(`删除账号 ${email}`,'w');loadAccounts();}
+    }
+
+    async function resetPassword(uid){
+      const pw=prompt('请输入新密码（至少6位）：');
+      if(!pw)return;
+      if(pw.length<6){showToast('密码至少6位','error');return;}
+      const result=await callAdminFn({action:'reset-password',user_id:uid,new_password:pw});
+      if(result){showToast('✅ 密码已重置','success');log(`重置密码 ${uid}`,'s');}
+    }
+
     async function changeUserRole(uid,newRole){
+      if(!newRole)return;
       if(!confirm('确定要修改此用户的角色吗？'))return;
       const {error}=await API.updateUserRole(uid,newRole);
       if(error){showToast('修改失败: '+error.message,'error');log(`修改角色失败 ${uid}`,'e');}
