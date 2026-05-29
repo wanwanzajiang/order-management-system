@@ -76,7 +76,7 @@ const FileOps = {
 
   async _upload(fileList) {
     if (!fileList?.length || !this._openOrderId) return;
-    const session = Auth.getSession();
+    const { data: { session } } = await SUPABASE.auth.getSession();
     const token = session?.access_token;
     if (!token) return alert('请重新登录');
 
@@ -97,7 +97,8 @@ const FileOps = {
   _replace(oldId) { const i=document.createElement('input'); i.type='file'; i.accept='image/*,video/*'; i.onchange=async()=>{if(i.files.length)FileOps._replaceDo(oldId,i.files[0])}; i.click(); },
 
   async _replaceDo(oldId, file) {
-    const session = Auth.getSession(); const token = session?.access_token;
+    const { data: { session } } = await SUPABASE.auth.getSession();
+    const token = session?.access_token;
     if (!token) return;
     try {
       const ts = Date.now(); const path = `${this._openOrderId}/${ts}_${file.name.replace(/[^a-zA-Z0-9._-]/g,'_')}`;
@@ -113,7 +114,8 @@ const FileOps = {
 
   async _del(orderId, fileId) {
     if (!confirm('确定删除？')) return;
-    const token = Auth.getSession()?.access_token;
+    const { data: { session } } = await SUPABASE.auth.getSession();
+    const token = session?.access_token;
     await API.removeFileFromOrder(orderId, fileId);
     await fetch(`${CONFIG.SUPABASE_URL}/storage/v1/object/order-files/${fileId}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } }).catch(()=>{});
     await this._load(orderId, '');
