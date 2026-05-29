@@ -315,3 +315,4 @@ const FileOps = {
     return `<button class="${cls}" onclick="FileOps.open(${order.id},'${App.escapeHtml(order.invoice_no)}','${userRole}')">${label}</button>`;
   }
 };
+window.FileOps = FileOps;
