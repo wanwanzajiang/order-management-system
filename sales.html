@@ -1,312 +1,111 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>订单管理 - 业务员</title>
-  <link rel="stylesheet" href="css/style.css">
-  <style>
-    .modal-overlay {
-      display:flex;align-items:center;justify-content:center;
-      position:fixed;top:0;left:0;right:0;bottom:0;
-      background:rgba(0,0,0,0.5);z-index:9999;
-    }
-    .modal-box {
-      background:#fff;border-radius:14px;padding:28px;max-width:400px;width:90%;
-      box-shadow:0 10px 40px rgba(0,0,0,0.2);text-align:center;
-    }
-    .modal-box h3 { margin:0 0 6px 0; font-size:18px; color:#333; }
-    .modal-box p { margin:0 0 20px 0; font-size:13px; color:#888; }
-    .modal-box input {
-      width:100%;padding:12px 16px;font-size:18px;text-align:center;
-      letter-spacing:4px;font-weight:600;border:2px solid #667eea;
-      border-radius:10px;margin-bottom:16px;outline:none;
-      font-family:'Courier New',monospace;
-    }
-    .modal-box input:focus { border-color:#4a55c4; box-shadow:0 0 0 3px rgba(102,126,234,0.15); }
-    .modal-error { color:#e24b4a; font-size:12px; margin-bottom:12px; min-height:18px; }
-
-    /* 身份栏 */
-    .identity-bar {
-      background:linear-gradient(135deg,#eef1ff 0%,#f0f4ff 100%);
-      border-radius:8px;padding:10px 16px;margin-bottom:16px;
-      display:flex;align-items:center;gap:12px;font-size:13px;
-    }
-    .identity-bar .sp-name { font-weight:600;color:#1a56db; font-size:15px; }
-    .identity-bar .sp-code { font-family:monospace;background:#fff;padding:2px 8px;border-radius:4px;color:#667eea;font-size:11px; }
-
-    /* 订单卡片 */
-    .order-card {
-      background:#fff;border-radius:12px;padding:18px;margin-bottom:14px;
-      border-left:4px solid #667eea;box-shadow:0 1px 4px rgba(0,0,0,0.06);
-      transition:box-shadow .2s;
-    }
-    .order-card:hover { box-shadow:0 4px 12px rgba(0,0,0,0.1); }
-    .oc-header {
-      display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:12px;
-    }
-    .oc-invoice { font-size:17px;font-weight:700;color:#1a56db; }
-    .oc-date { font-size:12px;color:#888; }
-    .oc-status {
-      display:inline-block;padding:3px 12px;border-radius:12px;font-size:12px;color:white;font-weight:500;
-    }
-    .oc-body { display:flex;gap:16px;flex-wrap:wrap; }
-    .oc-products { flex:1.5;min-width:220px; }
-    .oc-info { flex:1;min-width:160px;display:flex;flex-direction:column;gap:6px; }
-    .oc-info-row { font-size:12px;display:flex;align-items:center;gap:4px;color:#555; }
-    .oc-actions { display:flex;gap:6px;margin-top:10px;flex-wrap:wrap; }
-    .msg-badge { background:#e07a5f;color:#fff;font-size:11px;padding:1px 7px;border-radius:10px;margin-left:4px; }
-
-    /* 产品明细（卡片内） */
-    .pi-card { background:#fafbff;border-radius:8px;padding:10px 12px;border:1px dashed #d0d7ee; }
-    .pi-item { padding:5px 0;display:flex;align-items:center;gap:6px;font-size:12px; }
-    .pi-item + .pi-item { border-top:1px dotted #eee; }
-    .pi-brand { background:#e8f0fe;color:#1a56db;padding:2px 6px;border-radius:4px;font-size:10px;font-weight:500;white-space:nowrap; }
-    .pi-model { font-weight:600;color:#333; }
-    .pi-qty { color:#e67e22;font-weight:500; }
-    .pi-delivery { color:#aaa;font-size:11px;margin-left:auto; }
-
-    /* 留言弹窗 */
-    .msg-overlay {
-      position:fixed;top:0;left:0;right:0;bottom:0;
-      background:rgba(0,0,0,0.45);z-index:10000;
-      display:flex;align-items:center;justify-content:center;
-      opacity:0;pointer-events:none;transition:opacity .25s;
-    }
-    .msg-overlay.show { opacity:1;pointer-events:auto; }
-    .msg-panel {
-      background:#fff;border-radius:16px;width:92%;max-width:520px;max-height:80vh;
-      display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,0.25);
-      transform:translateY(20px);transition:transform .25s;
-    }
-    .msg-overlay.show .msg-panel { transform:translateY(0); }
-    .msg-header {
-      padding:16px 20px;background:linear-gradient(135deg,#667eea,#764ba2);
-      border-radius:16px 16px 0 0;display:flex;justify-content:space-between;align-items:center;
-    }
-    .msg-header h3 { margin:0;color:#fff;font-size:15px; }
-    .msg-close { background:none;border:none;color:rgba(255,255,255,0.8);font-size:22px;cursor:pointer;line-height:1; }
-    .msg-body { flex:1;overflow-y:auto;padding:16px 20px; }
-    .msg-bubble {
-      max-width:82%;padding:10px 14px;border-radius:12px;margin-bottom:10px;font-size:13px;line-height:1.5;
-    }
-    .msg-from-sales { background:#eef1ff;color:#334;border-top-left-radius:4px;align-self:flex-start; }
-    .msg-from-wh { background:#f0f9ff;color:#224;border-top-left-radius:4px;align-self:flex-start; }
-    .msg-from-admin { background:#fef3e2;color:#432;border-top-left-radius:4px;align-self:flex-start; }
-    .msg-self { background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;border-top-right-radius:4px;align-self:flex-end;margin-left:auto; }
-    .msg-meta { font-size:10px;color:#999;margin-top:3px; }
-    .msg-input-area {
-      padding:14px 20px;border-top:1px solid #eee;display:flex;gap:8px;align-items:flex-end;
-    }
-    .msg-input-area textarea {
-      flex:1;border:1.5px solid #ddd;border-radius:10px;padding:10px 12px;
-      font-size:13px;resize:none;height:48px;font-family:inherit;outline:none;
-      transition:border-color .2s;
-    }
-    .msg-input-area textarea:focus { border-color:#667eea; box-shadow:0 0 0 3px rgba(102,126,234,0.12); }
-    .msg-send-btn {
-      padding:10px 18px;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;
-      border:none;border-radius:10px;font-size:13px;cursor:pointer;font-weight:500;white-space:nowrap;
-      transition:transform .15s;
-    }
-    .msg-send-btn:hover { transform:scale(1.04); }
-    .msg-send-btn:active { transform:scale(0.97); }
-    .msg-empty { text-align:center;color:#bbb;padding:30px;font-size:13px; }
-    .msg-unread-dot { width:8px;height:8px;background:#e07a5f;border-radius:50%;display:inline-block;margin-right:4px;animation:pulse 1.5s infinite; }
-    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
-  </style>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>进度回复 - 业务员</title>
+<link rel="stylesheet" href="css/style.css">
+<style>
+body{font-family:sans-serif;background:#f5f3ee;margin:0}
+.header{background:#fff;padding:12px 24px;display:flex;justify-content:space-between;align-items:center;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+.header h1{font-size:18px;margin:0}
+.container{max-width:900px;margin:20px auto;padding:0 20px}
+.modal{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center;z-index:9999}
+.modal-box{background:#fff;border-radius:16px;padding:30px;width:90%;max-width:400px;text-align:center}
+.modal-box h2{margin:0 0 16px;font-size:18px}
+.modal-box input{padding:10px;border:2px solid #ddd;border-radius:8px;font-size:16px;text-align:center;width:160px;letter-spacing:4px}
+.modal-box button{margin-top:12px;padding:10px 30px;background:#e07a5f;color:#fff;border:none;border-radius:8px;font-size:15px;cursor:pointer}
+.modal-box .err{color:#e24b4a;font-size:13px;margin-top:8px}
+.card{background:#fff;border-radius:12px;padding:16px;margin-bottom:12px;border-left:4px solid #e07a5f}
+.card h4{margin:0 0 8px;font-size:15px}
+.card p{margin:4px 0;font-size:13px;color:#555}
+.filter{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;align-items:center}
+.loading{text-align:center;padding:40px;color:#999}
+.empty{text-align:center;padding:40px;color:#bbb}
+.toast{position:fixed;top:20px;right:20px;padding:10px 20px;border-radius:8px;color:#fff;z-index:9999;opacity:0;transition:opacity .3s}
+.toast.show{opacity:1}
+.toast-success{background:#27ae60}
+.toast-error{background:#e24b4a}
+</style>
 </head>
 <body>
-  <header class="header">
-    <div class="container">
-      <h1>📦 订单管理系统 - 业务员</h1>
-      <div class="header-info">
-        <div class="user-info">
-          <span id="userName">业务员</span>
-          <span class="role-badge" id="userRole">业务员</span>
-        </div>
-        <button class="btn btn-secondary btn-sm" onclick="Auth.logout()">退出登录</button>
-      </div>
-    </div>
-  </header>
+<div class="header">
+<h1>📦 进度回复系统 - 业务员</h1>
+<div id="spBadge" style="font-size:13px;color:#888"></div>
+</div>
 
-  <main class="container">
-    <div class="identity-bar" id="identityBar" style="display:none;">
-      <span style="font-size:18px;">👤</span>
-      <div><span>当前身份：</span><span class="sp-name" id="currentSpName"></span><span class="sp-code" id="currentSpCode"></span></div>
-      <div style="margin-left:auto;"><button class="btn btn-sm" onclick="switchSalesperson()" style="font-size:11px;padding:4px 10px;background:#fff;border:1px solid #ddd;">切换身份</button></div>
-    </div>
+<div class="container">
+<div class="filter">
+<input id="searchInvoice" placeholder="到款单号搜索" style="padding:6px 12px;border:1px solid #ddd;border-radius:8px;width:180px">
+<select id="searchStatus" onchange="doSearch()">
+<option value="">全部状态</option>
+<option>调货中</option><option>路途中</option><option>已到货</option><option>已完结</option>
+</select>
+<button class="btn" style="background:#e07a5f;color:#fff;padding:6px 16px;border:none;border-radius:8px;cursor:pointer" onclick="doSearch()">查询</button>
+</div>
+<div id="resultList"></div>
+</div>
 
-    <div class="card" style="border-left:4px solid #667eea;">
-      <h3 class="card-title">🔍 查询我的订单</h3>
-      <div class="filter-bar" style="margin-bottom:0;">
-        <label style="font-weight:500;color:#555;">按发票号：</label>
-        <input type="text" id="searchInvoice" class="form-control" placeholder="输入发票号搜索" style="width:200px;">
-        <label style="font-weight:500;color:#555;margin-left:12px;">状态：</label>
-        <select id="searchStatus" class="form-control" style="width:auto;min-width:120px;">
-          <option value="">全部状态</option>
-          <option value="__empty__">- 待填写 -</option>
-          <option value="调货中">调货中</option>
-          <option value="路途中">路途中</option>
-          <option value="已到货">已到货</option>
-          <option value="已完结">已完结</option>
-        </select>
-        <button class="btn btn-primary btn-sm" onclick="searchOrders()" style="margin-left:auto;">🔍 搜索</button>
-        <button class="btn btn-secondary btn-sm" onclick="resetSearch()">重置</button>
-      </div>
-      <p style="font-size:12px;color:#aaa;margin-top:8px;">💡 只显示当前身份（<strong id="hintSpName"></strong>）的订单数据，其他业务员的订单不可见。</p>
-    </div>
+<div class="modal" id="codeModal">
+<div class="modal-box">
+<h2>🔐 验证身份</h2>
+<p style="color:#888;font-size:13px;margin:0 0 12px">请输入业务员识别码</p>
+<input type="text" id="codeInput" placeholder="XXXXXX" maxlength="10" autofocus>
+<div class="err" id="codeError"></div>
+<button onclick="verifyCode()">确认</button>
+</div>
+</div>
 
-    <div id="resultContainer"></div>
-  </main>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/config.js"></script>
+<script src="js/api.js"></script>
+<script>
+let currentSp = null;
+document.addEventListener('DOMContentLoaded', () => { showCodeModal(); });
+document.addEventListener('keydown', e => { if (e.key==='Enter' && document.getElementById('codeModal').style.display!=='none') verifyCode(); });
 
-  <footer class="footer">© <span id="footerYear"></span> 订单管理系统</footer>
+function showCodeModal() {
+  document.getElementById('codeModal').style.display = 'flex';
+  document.getElementById('codeInput').value = '';
+  document.getElementById('codeError').textContent = '';
+}
 
-  <!-- 识别码验证 -->
-  <div class="modal-overlay" id="codeModal" style="display:none;">
-    <div class="modal-box">
-      <h3>🔐 身份确认</h3>
-      <p>请输入您的<strong>业务员识别码</strong>以确认身份</p>
-      <input type="text" id="codeInput" autocomplete="off" placeholder="例如 SP001" maxlength="20">
-      <div class="modal-error" id="codeError"></div>
-      <button class="btn btn-primary" onclick="verifyCode()" style="width:100%;padding:12px;font-size:15px;">确认进入</button>
-    </div>
-  </div>
+async function verifyCode() {
+  const code = document.getElementById('codeInput').value.trim().toUpperCase();
+  const errEl = document.getElementById('codeError');
+  if (!code) { errEl.textContent = '请输入识别码'; return; }
+  const { data, error } = await SUPABASE.from('salespeople').select('*').eq('access_code', code).maybeSingle();
+  if (error || !data) { errEl.textContent = '识别码错误'; return; }
+  if (!data.is_active) { errEl.textContent = '该业务员已被停用'; return; }
+  currentSp = data;
+  document.getElementById('codeModal').style.display = 'none';
+  document.getElementById('spBadge').textContent = '👤 ' + data.name + ' | ' + data.access_code;
+  await doSearch();
+}
 
-  
+async function doSearch() {
+  if (!currentSp) { showCodeModal(); return; }
+  const container = document.getElementById('resultList');
+  container.innerHTML = '<div class="loading">加载中...</div>';
+  const inv = document.getElementById('searchInvoice').value.trim();
+  const status = document.getElementById('searchStatus').value;
+  const filters = { sp: currentSp.name };
+  if (status) filters.status = status;
+  if (inv) filters.invoice = inv;
+  const { data, error } = await API.getOrders(filters);
+  if (error) { container.innerHTML = '<div class="empty">加载失败</div>'; return; }
+  if (!data || data.length === 0) { container.innerHTML = '<div class="empty">暂无订单</div>'; return; }
 
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="js/config.js"></script>
-  <script src="js/auth.js"></script>
-  <script src="js/api.js"></script>
-  <script src="js/app.js"></script>
-  <script>
-    document.getElementById('footerYear').textContent = new Date().getFullYear();
-    let currentSp = null;
-    let _currentMsgOrderId = null;
-
-    if (!Auth.requireRole([CONFIG.ROLES.SALES, CONFIG.ROLES.ADMIN, CONFIG.ROLES.WAREHOUSE])) {}
-    else init();
-
-    async function init() {
-      const user = Auth.getUser();
-      document.getElementById('userName').textContent = user.full_name || user.email;
-      document.getElementById('userRole').textContent = App.getRoleName(user.role);
-      const savedSp = sessionStorage.getItem('current_salesperson');
-      if (savedSp) try { currentSp = JSON.parse(savedSp); } catch(e) {}
-      if (currentSp && currentSp.name) { showIdentityBar(); showWelcome(); } else showModal();
-    }
-
-    // ========== 身份验证 ==========
-    function showModal() { document.getElementById('codeModal').style.display='flex'; document.getElementById('codeInput').value=''; document.getElementById('codeError').textContent=''; setTimeout(()=>document.getElementById('codeInput').focus(),300); }
-    function hideModal() { document.getElementById('codeModal').style.display='none'; }
-    document.addEventListener('keydown', e => { if (e.key==='Enter'&&document.getElementById('codeModal').style.display==='flex') verifyCode(); });
-
-    async function verifyCode() {
-      const code=document.getElementById('codeInput').value.trim().toUpperCase();
-      const errEl=document.getElementById('codeError');
-      if (!code){errEl.textContent='请输入识别码';return;}
-      const{data,error}=await SUPABASE.from('salespeople').select('*').eq('access_code',code).maybeSingle();
-      if (error||!data){errEl.textContent='❌ 识别码无效，请检查后重新输入';return;}
-      if (data.is_active===false){errEl.textContent='⛔ 该业务员已被停用，请联系管理员';return;}
-      currentSp={id:data.id,name:data.name,access_code:data.access_code};
-      sessionStorage.setItem('current_salesperson',JSON.stringify(currentSp));
-      hideModal();showIdentityBar();showToast(`✅ 欢迎，${currentSp.name}！`,'success');showWelcome();
-    }
-    function switchSalesperson(){currentSp=null;sessionStorage.removeItem('current_salesperson');document.getElementById('identityBar').style.display='none';document.getElementById('resultContainer').innerHTML='';showModal();}
-    function showIdentityBar(){
-      if(!currentSp)return;
-      document.getElementById('identityBar').style.display='flex';
-      document.getElementById('currentSpName').textContent=currentSp.name;
-      document.getElementById('currentSpCode').textContent=currentSp.access_code;
-      document.getElementById('hintSpName').textContent=currentSp.name;
-    }
-
-    // ========== 搜索 ==========
-    function showWelcome(){
-      const spName=currentSp?currentSp.name:'';
-      document.getElementById('resultContainer').innerHTML=`<div class="card" style="margin-top:20px;text-align:center;padding:40px 20px;background:#f8f9ff;border-radius:10px;border:2px dashed #ccc;"><p style="font-size:40px;margin-bottom:16px;">📋</p><h3 style="color:#555;margin-bottom:8px;">查询「${App.escapeHtml(spName)}」的订单</h3><p style="color:#999;font-size:14px;">可以按发票号、订单状态筛选</p><p style="color:#bbb;font-size:12px;margin-top:12px;">💡 数据隔离：只能看到自己的订单</p></div>`;
-    }
-
-    async function searchOrders(){
-      if(!currentSp){showModal();return;}
-      const container=document.getElementById('resultContainer');App.showLoading(container);
-      let query=SUPABASE.from('orders').select('*').order('created_at',{ascending:false});
-      query=query.eq('salesperson_name',currentSp.name);
-      const invoiceNo=document.getElementById('searchInvoice').value.trim();
-      const status=document.getElementById('searchStatus').value;
-      if(invoiceNo)query=query.ilike('invoice_no',`%${invoiceNo}%`);
-      if(status==='__empty__'){query=query.is('order_status',null);}else if(status){query=query.eq('order_status',status);}
-      const{data,error}=await query;
-      if(error){App.showError(container,'查询失败: '+error.message);return;}
-      if(!data||data.length===0){
-        container.innerHTML=`<div class="card" style="margin-top:20px;text-align:center;padding:30px;"><p style="font-size:36px;margin-bottom:8px;">🔍</p><p style="color:#999;">没有找到匹配的订单</p><p style="color:#bbb;font-size:12px;margin-top:4px;">试试更换搜索条件？</p></div>`;
-        return;
-      }
-      // 批量获取未读留言数
-      const oids=data.map(o=>o.id);
-      const unreadCounts=await API.getUnreadCounts(oids);
-      renderResults(data,unreadCounts);
-    }
-
-    function renderResults(orders,unreadCounts){
-      const container=document.getElementById('resultContainer');
-      const totalQty=orders.reduce((sum,o)=>sum+(o.quantity||0),0);
-      const statusCount={};orders.forEach(o=>{statusCount[o.order_status]=(statusCount[o.order_status]||0)+1;});
-      let html=`<div style="display:flex;gap:20px;flex-wrap:wrap;margin-bottom:16px;padding:12px;background:#f8f9ff;border-radius:8px;">
-        <span style="font-size:15px;">📊 找到 <strong style="color:#667eea;font-size:18px;">${orders.length}</strong> 条订单</span>
-        <span style="font-size:15px;">📦 总数量：<strong style="color:#e67e22;font-size:18px;">${totalQty}</strong></span>
-        ${Object.entries(statusCount).map(([s,c])=>`<span style="font-size:13px;color:#888;">${s||'(待填写)'}: <strong>${c}</strong></span>`).join('')}
-      </div>`;
-
-      orders.forEach(order=>{
-        const sc={'调货中':'#e67e22','路途中':'#3498db','已到货':'#27ae60','已完结':'#95a5a6'}[order.order_status]||'#999';
-        const uc=(unreadCounts&&unreadCounts[order.id])||0;
-        html+=`<div class="order-card">
-          <div class="oc-header">
-            <div><span class="oc-invoice">${App.escapeHtml(order.invoice_no)}</span></div>
-            <div style="display:flex;align-items:center;gap:8px;">
-              <span class="oc-status" style="background:${sc};">${order.order_status||'<span style="background:#ccc;color:#666;">待填写</span>'}</span>
-              <span class="oc-date">${order.order_date||'-'}</span>
-            </div>
-          </div>
-          <div class="oc-body">
-            <div class="oc-products"><div class="pi-card">${renderProducts(order.product_model)}</div></div>
-            <div class="oc-info">
-              <div class="oc-info-row">📦 数量：<strong>${order.quantity||'-'}</strong></div>
-              <div class="oc-info-row">🚚 发货：${order.shipping_date||'<span style="color:#ccc;">待填写</span>'}</div>
-              <div class="oc-info-row">📮 快递：${order.tracking_no?App.escapeHtml(order.tracking_no):'<span style="color:#ccc;">待填写</span>'}</div>
-              <div class="oc-info-row" title="${App.escapeHtml(order.warehouse_notes||'')}">📝 仓库备注：${App.escapeHtml((order.warehouse_notes||'-').substring(0,20))}${(order.warehouse_notes||'').length>20?'...':''}</div>
-              <div class="oc-info-row" title="${App.escapeHtml(order.sales_notes||'')}">📝 业务备注：${App.escapeHtml((order.sales_notes||'-').substring(0,20))}${(order.sales_notes||'').length>20?'...':''}</div>
-            </div>
-          </div>
-          <div class="oc-actions">
-            <button class="btn btn-sm" onclick="openMsgPanel(${order.id},'${App.escapeHtml(order.invoice_no)}')" style="background:#fdfbf7;color:#e07a5f;border:1px solid #f0d9cb;font-size:12px;padding:5px 14px;">💬 留言${uc?`<span class="msg-badge">${uc}条新</span>`:''}</button>
-            <span style="font-size:11px;color:#ccc;margin-left:auto;">${App.formatDate(order.created_at)}</span>
-          </div>
-        </div>`;
-      });
-      container.innerHTML=html;
-    }
-
-    // 产品明细渲染
-    function renderProducts(pm){
-      if(!pm)return'<span style="color:#ccc;padding:8px;">-</span>';
-      let products=null;if(typeof pm==='string'&&pm.startsWith('[')){try{products=JSON.parse(pm);}catch(e){}}
-      if(products&&Array.isArray(products)&&products.length>0){
-        return products.map(p=>{
-          const brand=p.brand?`<span class="pi-brand">${App.escapeHtml(p.brand)}</span>`:'';
-          const model=`<span class="pi-model">${App.escapeHtml(p.model||'-')}</span>`;
-          const qty=p.qty?`<span class="pi-qty">×${p.qty}</span>`:'';
-          const delivery=p.delivery?`<span class="pi-delivery">📅${App.escapeHtml(p.delivery)}</span>`:'';
-          return`<div class="pi-item">${brand}${model} ${qty} ${delivery}</div>`;
-        }).join('');
-      }
-      return`<span style="color:#555;font-size:12px;padding:8px;">${App.escapeHtml(pm)}</span>`;
-    }
-
-    
-
-  </script>
+  let html = '';
+  data.forEach(o => {
+    const sc = { '调货中': '#e67e22', '路途中': '#3498db', '已到货': '#27ae60', '已完结': '#95a5a6' }[o.order_status] || '#999';
+    html += `<div class="card" style="border-left-color:${sc}">
+      <h4>${o.invoice_no} <span style="color:${sc};font-size:13px;font-weight:normal">[${o.order_status||'-'}]</span></h4>
+      <p>📦 ${o.product_model || '-'} × ${o.quantity||'-'} | 📅 ${o.order_date||'-'}</p>
+      <p>🚚 预计发货：${o.shipping_date || '待填写'} | 📝 ${o.warehouse_notes || '-'}</p>
+    </div>`;
+  });
+  container.innerHTML = html;
+}
+</script>
 </body>
 </html>
