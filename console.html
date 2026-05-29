@@ -118,6 +118,7 @@
   <script src="js/auth.js?v=1780068441"></script>
   <script src="js/api.js?v=1780068441"></script>
   <script src="js/app.js?v=1780068441"></script>
+  <script src="js/admin-api.js?v=1780068441"></script>
   <script>
     const TABS = [
       {id:'overview',icon:'📊',label:'系统总览'},
@@ -177,21 +178,6 @@
       }catch(e){console.error('[Console] loadOverview error:',e);document.getElementById('oDetail').innerHTML='<h3>⚠️ 加载失败</h3><p style="color:#f87171;">数据加载异常，请刷新重试<br><small>'+String(e.message||e)+'</small></p>';log('总览加载失败: '+e,'e');}
     }
 
-    // ======== Accounts ========
-    const ADMIN_FN = `${CONFIG.SUPABASE_URL}/functions/v1/admin-ops`;
-
-    async function callAdminFn(body) {
-      const session = Auth.getSession();
-      if (!session) { showToast('请重新登录', 'error'); return null; }
-      const res = await fetch(ADMIN_FN, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${session.access_token}` },
-        body: JSON.stringify(body)
-      });
-      const data = await res.json();
-      if (!res.ok) { showToast(data.error || '操作失败', 'error'); return null; }
-      return data;
-    }
 
     async function loadAccounts(){
       const c=document.getElementById('tab-accounts');
@@ -235,22 +221,25 @@
       const role=document.getElementById('newRole').value;
       if(!email||!password){showToast('邮箱和密码必填','error');return;}
       if(password.length<6){showToast('密码至少6位','error');return;}
-      const result=await callAdminFn({action:'create-user',email,password,role});
-      if(result){showToast('✅ 账号已创建','success');log(`创建账号 ${email}`,'s');loadAccounts();}
+      const {error}=await AdminAPI.createUser(email,password,role);
+      if(error){showToast('创建失败: '+error.message,'error');}
+      else{showToast('✅ 账号已创建','success');log('创建账号 '+email,'s');loadAccounts();}
     }
 
     async function deleteAccount(uid,email){
-      if(!confirm(`⚠️ 确定删除账号「${email}」？此操作不可恢复！`))return;
-      const result=await callAdminFn({action:'delete-user',user_id:uid});
-      if(result){showToast('✅ 账号已删除','success');log(`删除账号 ${email}`,'w');loadAccounts();}
+      if(!confirm('⚠️ 确定删除账号「'+email+'」？此操作不可恢复！'))return;
+      const {error}=await AdminAPI.deleteUser(uid);
+      if(error){showToast('删除失败: '+error.message,'error');}
+      else{showToast('✅ 账号已删除','success');log('删除账号 '+email,'w');loadAccounts();}
     }
 
     async function resetPassword(uid){
       const pw=prompt('请输入新密码（至少6位）：');
       if(!pw)return;
       if(pw.length<6){showToast('密码至少6位','error');return;}
-      const result=await callAdminFn({action:'reset-password',user_id:uid,new_password:pw});
-      if(result){showToast('✅ 密码已重置','success');log(`重置密码 ${uid}`,'s');}
+      const {error}=await AdminAPI.resetPassword(uid,pw);
+      if(error){showToast('重置失败: '+error.message,'error');}
+      else{showToast('✅ 密码已重置','success');log('重置密码 '+uid,'s');}
     }
 
     async function changeUserRole(uid,newRole){
