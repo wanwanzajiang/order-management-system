@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>进度回复 - 仓库</title>
+  <title>订单管理 - 仓库</title>
   <link rel="stylesheet" href="css/style.css">
   <style>
     /* 留言面板 */
@@ -45,12 +45,8 @@
 <body>
   <header class="header">
     <div class="container">
-      <h1>📦 进度回复系统 - 仓库</h1>
+      <h1>📦 订单管理系统 - 仓库</h1>
       <div class="header-info">
-        <div id="notifyBell" class="notify-bell" onclick="checkNotifications()" style="display:none;cursor:pointer;position:relative;margin-right:12px;">
-          <span style="font-size:22px;">🔔</span>
-          <span id="notifyBadge" class="notify-badge" style="position:absolute;top:-6px;right:-8px;background:#e07a5f;color:#fff;font-size:10px;padding:1px 6px;border-radius:10px;font-weight:500;">0</span>
-        </div>
         <div class="user-info">
           <span id="userName">仓库人员</span>
           <span class="role-badge" id="userRole">仓库</span>
@@ -68,8 +64,8 @@
       <div class="filter-bar">
         <label style="font-weight:500;color:#555;">状态筛选：</label>
         <select id="filterStatus" class="form-control" style="width:auto;min-width:140px;" onchange="loadOrders()">
-          <option value="" selected>全部状态</option>
-          <option value="调货中">调货中（优先处理）</option>
+          <option value="">全部状态</option>
+          <option value="调货中" selected>调货中（优先处理）</option>
           <option value="路途中">路途中</option>
           <option value="已到货">已到货</option>
           <option value="已完结">已完结</option>
@@ -82,7 +78,7 @@
       </div>
 
       <p style="font-size:13px;color:#888;margin-bottom:12px;">
-        💡 你的权限：更新订单状态、填写<span style="color:#e07a5f;font-weight:600;">预计发货时间</span>和<span style="color:#e07a5f;font-weight:600;"></span>、添加进度回复
+        💡 你的权限：更新订单状态、填写<span style="color:#e07a5f;font-weight:600;">发货时间</span>和<span style="color:#e07a5f;font-weight:600;">快递单号</span>、添加仓库备注
       </p>
 
       <div id="ordersContainer">
@@ -92,7 +88,7 @@
   </main>
 
   <footer class="footer">
-    © <span id="footerYear"></span> 进度回复系统
+    © <span id="footerYear"></span> 订单管理系统
   </footer>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -100,19 +96,7 @@
   <script src="js/auth.js"></script>
   <script src="js/api.js"></script>
   <script src="js/app.js"></script>
-  <script src="js/file-ops.js"></script>
-  <!-- 文件面板 -->
-  <div class="file-overlay" id="filePanelOverlay" onclick="if(event.target===this)FileOps.close()">
-    <div class="file-panel">
-      <div class="file-panel-header">
-        <h3 id="filePanelTitle">📎 订单文件</h3>
-        <button class="file-panel-close" onclick="FileOps.close()">&times;</button>
-      </div>
-      <div class="file-panel-body" id="filePanelBody">
-        <p class="file-empty">加载中...</p>
-      </div>
-    </div>
-  </div>
+  
 
   <script>
     document.getElementById('footerYear').textContent = new Date().getFullYear();
@@ -127,26 +111,8 @@
       const user = Auth.getUser();
       document.getElementById('userName').textContent = user.full_name || user.email;
       document.getElementById('userRole').textContent = App.getRoleName(user.role);
-      _currentRole = user.role;
-      App._currentRole = user.role;
       await loadSalespeopleFilter();
-      await loadOrders();
-      checkNotifications();
-    }
-
-    async function checkNotifications() {
-      if (_currentRole === 'sales') return;
-      const { count } = await API.getPendingCount();
-      const bell = document.getElementById('notifyBell');
-      const badge = document.getElementById('notifyBadge');
-      if (!bell || !badge) return;
-      if (count > 0) {
-        bell.style.display = 'block';
-        badge.textContent = count;
-      } else {
-        bell.style.display = 'none';
-      }
-      API.markNotified();
+      await loadOrders(); // 默认显示"调货中"
     }
 
     async function loadSalespeopleFilter() {
@@ -193,11 +159,14 @@
         return;
       }
 
-      // 渲染订单列表
-      renderOrders(data);
+      // 获取未读留言数
+      const oids = data.map(o => o.id);
+      const unreadCounts = await API.getUnreadCounts(oids);
+
+      renderOrders(data, unreadCounts);
     }
 
-    function renderOrders(orders) {
+    function renderOrders(orders, unreadCounts) {
       const container = document.getElementById('ordersContainer');
 
       orders.sort((a, b) => {
@@ -222,22 +191,22 @@
             <table>
               <thead>
                 <tr>
-                  <th>到款单号</th><th style="cursor:pointer;user-select:none;white-space:nowrap;" onclick="toggleDateSort()">单据日期 <span id="whDateSortIcon" style="font-size:11px;color:#999;">↓ 降序</span></th><th style="min-width:200px;">产品明细</th>
+                  <th>发票号</th><th style="cursor:pointer;user-select:none;white-space:nowrap;" onclick="toggleDateSort()">单据日期 <span id="whDateSortIcon" style="font-size:11px;color:#999;">↓ 降序</span></th><th style="min-width:200px;">产品明细</th>
                   <th>总数量</th><th>业务员</th>
-                  <th style="color:#e07a5f;font-weight:600;">📅 预计发货时间</th>
-                  <th>进度回复</th><th>拍照</th><th>是否带来</th><th>验货时间</th><th>收回时间</th><th style="min-width:70px;">操作</th>
+                  <th style="color:#e07a5f;font-weight:600;">📅 发货时间</th>
+                  <th style="color:#e07a5f;font-weight:600;">📦 快递单号</th>
+                  <th>仓库备注</th><th style="min-width:70px;">操作</th>
                 </tr>
               </thead>
               <tbody>`;
 
         groups[status].forEach(order => {
           const productsHtml = renderWarehouseProductDetail(order.product_model);
-          const fileBtn = FileOps.renderFileBtn(order, _currentRole);
-          const hasPending = order.bring_goods != null || order.photo_request || order.inspection_date || order.return_date;
-          const rowStyle = hasPending ? 'background:#fffdf5;' : '';
+          const uc = (unreadCounts && unreadCounts[order.id]) || 0;
+          const unreadBadge = uc ? `<span class="unread-badge" onclick="openWhMsgPanel(${order.id},'${App.escapeHtml(order.invoice_no)}')">💬 ${uc}条新留言</span>` : '';
 
-          html += `<tr data-id="${order.id}" style="${rowStyle}">
-            <td><strong>${App.escapeHtml(order.invoice_no)}</strong></td>
+          html += `<tr data-id="${order.id}">
+            <td><strong>${App.escapeHtml(order.invoice_no)}</strong>${unreadBadge}</td>
             <td>${order.order_date || '-'}</td>
             <td style="max-width:260px;font-size:11px;">${productsHtml}</td>
             <td><strong>${order.quantity || '-'}</strong></td>
@@ -247,16 +216,16 @@
                 value="${order.shipping_date || ''}"
                 onchange="updateShipping(${order.id}, this.value)"
                 style="width:150px;padding:4px 6px;font-size:13px;"
-                title="由仓库填写实际预计发货时间">
+                title="由仓库填写实际发货时间">
             </td>
+            
             <td>
               <input type="text" class="notes-input warehouse-notes"
                 value="${App.escapeHtml(order.warehouse_notes || '')}"
-                onblur="updateWarehouseNotes(${order.id}, this.value)" placeholder="进度回复">
+                onblur="updateWarehouseNotes(${order.id}, this.value)" placeholder="仓库备注">
             </td>
-            <td style="text-align:center;">${order.photo_request ? '📸' : '-'}</td>
-            <td>${order.bring_goods === true ? "✅是" : order.bring_goods === false ? "❌否" : "-"}</td><td>${order.inspection_date || "-"}</td><td>${order.return_date || "-"}</td><td style="display:flex;gap:4px;flex-wrap:wrap;">
-              ${fileBtn}
+            <td style="display:flex;gap:4px;flex-wrap:wrap;">
+              <button class="btn btn-sm" onclick="openWhMsgPanel(${order.id},'${App.escapeHtml(order.invoice_no)}')" style="font-size:11px;padding:3px 8px;background:#fdfbf7;color:#e07a5f;border:1px solid #f0d9cb;">💬留言</button>
               <select class="form-control status-select" onchange="updateStatus(${order.id}, this.value)" style="width:80px;">
                 <option value="">- 待填写 -</option>
                 ${CONFIG.ORDER_STATUSES.map(s =>
@@ -313,15 +282,22 @@
 
     async function updateShipping(id, dateVal) {
       const { error } = await API.updateOrder(id, { shipping_date: dateVal || null });
-      if (error) showToast('保存预计发货时间失败: ' + error.message, 'error');
-      else console.log('[Warehouse] 预计发货时间已更新:', dateVal);
+      if (error) showToast('保存发货时间失败: ' + error.message, 'error');
+      else console.log('[Warehouse] 发货时间已更新:', dateVal);
+    }
+
+     = await API.updateOrder(id, {});
+      if (error) showToast('保存单号失败: ' + error.message, 'error');
+      else console.log('[Warehouse] 快递单号已更新:', noVal);
     }
 
     async function updateWarehouseNotes(id, notes) {
       const { error } = await API.updateOrder(id, { warehouse_notes: notes });
-      if (error) showToast('进度回复保存失败: ' + error.message, 'error');
+      if (error) showToast('备注保存失败: ' + error.message, 'error');
     }
 
-    // 当前用户角色（供 FileOps 使用）
-    let _currentRole = '';
+    
+
   </script>
+</body>
+</html>

@@ -3,9 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>进度回复 - 管理员</title>
+  <title>订单管理 - 管理员</title>
   <link rel="stylesheet" href="css/style.css">
-  <link rel="stylesheet" href="css/file-panel.css">
   <style>
     #orderEditModal.show{opacity:1;pointer-events:auto;}
     #orderEditModal.show #orderEditBox{transform:translateY(0);}
@@ -47,7 +46,7 @@
 <body>
   <header class="header">
     <div class="container">
-      <h1>📦 进度回复系统 - 管理员</h1>
+      <h1>📦 订单管理系统 - 管理员</h1>
       <div class="header-info">
         <div class="user-info">
           <span id="userName">管理员</span>
@@ -66,7 +65,7 @@
     <!-- Tab 导航 -->
     <div class="tab-nav" id="tabNav">
       <button class="tab-btn active" data-tab="dashboard" onclick="switchTab('dashboard')">📊 数据概览</button>
-      <button class="tab-btn" data-tab="orders" onclick="switchTab('orders')">📋 进度回复</button>
+      <button class="tab-btn" data-tab="orders" onclick="switchTab('orders')">📋 订单管理</button>
       <button class="tab-btn" data-tab="salespeople" onclick="switchTab('salespeople')">👥 业务员管理</button>
     </div>
 
@@ -89,7 +88,7 @@
       </div>
     </div>
 
-    <!-- ===== Tab 2: 进度回复 ===== -->
+    <!-- ===== Tab 2: 订单管理 ===== -->
     <div class="tab-content" id="tab-orders" style="display:none;">
       <!-- 新增订单表单（多产品版） -->
       <div class="card">
@@ -98,7 +97,7 @@
           <!-- 第一行：基础信息 -->
           <div class="form-row">
             <div class="form-group">
-              <label for="invoiceNo">到款单号 / 单号 *</label>
+              <label for="invoiceNo">发票号 / 单号 *</label>
               <input type="text" id="invoiceNo" class="form-control" required>
             </div>
             <div class="form-group">
@@ -117,7 +116,8 @@
               <small class="form-hint" style="color:#888;font-size:12px;">如无选项，请到「业务员管理」添加</small>
             </div>
             <div class="form-group">
-              <label for="salesNotes"></label>
+              <label for="salesNotes">业务员备注</label>
+              <input type="text" id="salesNotes" class="form-control">
             </div>
           </div>
 
@@ -214,7 +214,7 @@
   </main>
 
   <footer class="footer">
-    © <span id="footerYear"></span> 进度回复系统 · 管理员面板
+    © <span id="footerYear"></span> 订单管理系统 · 管理员面板
   </footer>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -222,7 +222,6 @@
   <script src="js/auth.js"></script>
   <script src="js/api.js"></script>
   <script src="js/app.js"></script>
-  <script src="js/file-ops.js"></script>
   <script>
     // 页脚年份
     document.getElementById('footerYear').textContent = new Date().getFullYear();
@@ -255,25 +254,20 @@
     let productRowCount = 0;
 
     async function init() {
-      try {
       const user = Auth.getUser();
-      _currentRole = user.role;
-      App._currentRole = user.role;
       document.getElementById('userName').textContent = user.full_name || user.email;
       document.getElementById('userRole').textContent = App.getRoleName(user.role);
-      // 动态页脚
-      const roleName = App.getRoleName(user.role);
-      document.querySelector('footer span').innerHTML = '进度回复系统 · ' + roleName + '面板';
       if (user.role === CONFIG.ROLES.SUPER) {
         document.getElementById('superEntry').style.display = '';
       }
 
+      // 默认填今天日期
       document.getElementById('orderDate').value = new Date().toISOString().split('T')[0];
+
+      // 初始化时默认添加一行产品
       addProductRow();
+
       await loadDashboard();
-      } catch(e) {
-        document.body.innerHTML = '<div style=\"padding:40px;text-align:center;color:red;\">初始化错误: ' + e.message + '<br><pre>' + (e.stack||'') + '</pre></div>';
-      }
     }
 
     // ========== 动态产品行管理 ==========
@@ -467,7 +461,7 @@
       container.innerHTML = html;
     }
 
-    // ========== 进度回复 ==========
+    // ========== 订单管理 ==========
 
     // 加载业务员下拉选项（用于新建订单）
     async function loadSalespeopleSelect() {
@@ -530,11 +524,14 @@
         return;
       }
 
+      // 获取未读留言数
+      const oids = data.map(o => o.id);
+      const unreadCounts = await API.getUnreadCounts(oids);
 
-      renderOrders(data);
+      renderOrders(data, unreadCounts);
     }
 
-    function renderOrders(orders) {
+    function renderOrders(orders, unreadCounts) {
       const container = document.getElementById('ordersContainer');
 
       orders.sort((a, b) => {
@@ -547,10 +544,10 @@
           <table>
             <thead>
               <tr>
-                <th>到款单号</th><th style="cursor:pointer;user-select:none;white-space:nowrap;" onclick="toggleOrderDateSort()">单据日期 <span id="orderDateSortIcon" style="font-size:11px;color:#999;">↓ 降序</span></th><th style="min-width:200px;">产品明细</th>
+                <th>发票号</th><th style="cursor:pointer;user-select:none;white-space:nowrap;" onclick="toggleOrderDateSort()">单据日期 <span id="orderDateSortIcon" style="font-size:11px;color:#999;">↓ 降序</span></th><th style="min-width:200px;">产品明细</th>
                 <th>总数量</th><th>状态</th>
-                <th>业务员</th><th>预计发货时间</th>
-                <th>进度回复</th><th>业务备注</th><th style="min-width:50px;">💬留言</th>
+                <th>业务员</th><th>发货时间</th><th>快递单号</th>
+                <th>仓库备注</th><th>业务备注</th><th style="min-width:50px;">💬留言</th>
                 <th>创建时间</th><th>操作</th>
               </tr>
             </thead>
@@ -567,6 +564,10 @@
           '已完结': 'status-completed'
         }[order.order_status] || '';
 
+        const uc = (unreadCounts && unreadCounts[order.id]) || 0;
+        const msgTag = uc ? `<span class="msg-count-tag" onclick="openAdmMsgPanel(${order.id},'${App.escapeHtml(order.invoice_no)}')">${uc}</span>` :
+          '<button class="btn btn-sm" style="font-size:10px;padding:2px 8px;background:#f5f5f5;border:1px solid #ddd;" onclick="openAdmMsgPanel('+order.id+',\''+order.invoice_no+'\')">查看</button>';
+
         html += `<tr data-id="${order.id}">
           <td><strong>${App.escapeHtml(order.invoice_no)}</strong></td>
           <td>${order.order_date || '-'}</td>
@@ -582,15 +583,14 @@
           </td>
           <td>${App.escapeHtml(order.salesperson_name || '-')}</td>
           <td>${order.shipping_date || '-'}</td>
+          <td>${App.escapeHtml(order.tracking_no || '-')}</td>
           <td>
             <input type="text" class="notes-input warehouse-notes"
               value="${App.escapeHtml(order.warehouse_notes || '')}"
-              onblur="updateWarehouseNotes(${order.id}, this.value)" placeholder="进度回复">
+              onblur="updateWarehouseNotes(${order.id}, this.value)" placeholder="仓库填写">
           </td>
-          <td style="text-align:center;">${order.photo_request ? '📸' : '-'}</td>
-          <td>${order.bring_goods === true ? '✅是' : order.bring_goods === false ? '❌否' : '-'}</td>
-          <td>${order.inspection_date || '-'}</td>
-          <td>${order.return_date || '-'}</td>
+          
+          <td style="text-align:center;">${msgTag}</td>
           <td style="white-space:nowrap;font-size:12px;color:#999;">${App.formatDate(order.created_at)}</td>
           <td>
             <button class="btn btn-danger btn-sm" onclick="deleteOrder(${order.id})">删除</button>
@@ -616,6 +616,7 @@
       const invoiceNo = document.getElementById('invoiceNo').value.trim();
       const orderDate = document.getElementById('orderDate').value;
       const salespersonName = document.getElementById('salespersonName').value;
+      const salesNotes = document.getElementById('salesNotes').value.trim();
 
       // 收集产品行数据
       const { products, hasValidData } = collectProducts();
@@ -633,10 +634,10 @@
       // 计算总数量
       const totalQty = products.reduce((sum, p) => sum + (p.qty || 0), 0);
 
-      // 到款单号重复检测
+      // 发票号重复检测
       const existing = await API.getOrderByInvoice(invoiceNo);
       if (existing.data) {
-        showToast('该到款单号已存在，请检查后重新输入', 'error');
+        showToast('该发票号已存在，请检查后重新输入', 'error');
         return;
       }
 
@@ -649,8 +650,7 @@
         product_model: JSON.stringify(products),
         quantity: totalQty,
         delivery_date: null,
-        salesperson_name: salespersonName
-      });
+        salesperson_name: salespersonName});
 
       setBtnLoading(btn, false, '添加订单');
 
@@ -869,8 +869,14 @@
       if (error) showToast('更新备注失败: ' + error.message, 'error');
     }
 
-    // 当前用户角色
-    let _currentRole = '';
+     = await API.updateOrder(orderId, {});
+      if (error) {
+        showToast('更新备注失败: ' + error.message, 'error');
+      } else {
+        // 不频繁提示
+      }
+    }
+
     async function deleteOrder(orderId) {
       if (!confirm('确定要删除此订单吗？此操作不可恢复！')) return;
       const { error } = await API.deleteOrder(orderId);
@@ -911,17 +917,19 @@
         body.innerHTML = `
 <form onsubmit="saveEdited(event)">
 <div class="form-row-c" style="margin-bottom:12px;">
-  <div class="form-group"><label>到款单号 *</label><input type="text" id="ei_no" value="${App.escapeHtml(order.invoice_no)}" required style="width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:6px;"></div>
+  <div class="form-group"><label>发票号 *</label><input type="text" id="ei_no" value="${App.escapeHtml(order.invoice_no)}" required style="width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:6px;"></div>
   <div class="form-group"><label>单据日期</label><input type="date" id="ei_date" value="${order.order_date || ''}" style="width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:6px;"></div>
   <div class="form-group"><label>总数量</label><input type="number" id="ei_qty" value="${order.quantity || 0}" min="0" style="width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:6px;"></div>
 </div>
 <div class="form-row-c" style="margin-bottom:12px;">
   <div class="form-group"><label>状态</label><select id="ei_status" style="width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:6px;"><option value="">- 待填写 -</option>${CONFIG.ORDER_STATUSES.map(s => `<option value="${s}" ${s === order.order_status ? 'selected' : ''}>${s}</option>`).join('')}</select></div>
   <div class="form-group"><label>业务员</label><input type="text" id="ei_sp" value="${App.escapeHtml(order.salesperson_name || '')}" style="width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:6px;"></div>
-  <div class="form-group"><label>预计发货时间</label><input type="date" id="ei_ship" value="${order.shipping_date || ''}" style="width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:6px;"></div>
+  <div class="form-group"><label>发货时间</label><input type="date" id="ei_ship" value="${order.shipping_date || ''}" style="width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:6px;"></div>
 </div>
 <div class="form-row-c" style="margin-bottom:12px;">
-  <div class="form-group"><label>进度回复</label><input type="text" id="ei_wnotes" value="${App.escapeHtml(order.warehouse_notes || '')}" style="width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:6px;"></div>
+  <div class="form-group"><label>快递单号</label><input type="text" id="ei_track" value="${App.escapeHtml(order.tracking_no || '')}" style="width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:6px;"></div>
+  <div class="form-group"><label>仓库备注</label><input type="text" id="ei_wnotes" value="${App.escapeHtml(order.warehouse_notes || '')}" style="width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:6px;"></div>
+  <div class="form-group"><label>业务备注</label><input type="text" id="ei_snotes" value="${App.escapeHtml(order.sales_notes || '')}" style="width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:6px;"></div>
 </div>
 
 <div style="border:1.5px solid #667eea;border-radius:10px;padding:14px;background:#fafbff;margin:10px 0;">
@@ -997,7 +1005,7 @@
         warehouse_notes: document.getElementById('ei_wnotes').value.trim(),
         product_model: JSON.stringify(products)
       };
-      if (!payload.invoice_no || !ok) { showToast('到款单号和至少一个型号必填', 'error'); return; }
+      if (!payload.invoice_no || !ok) { showToast('发票号和至少一个型号必填', 'error'); return; }
       const btn = e.target.querySelector('button[type="submit"]');
       setBtnLoading(btn, true, '保存中...');
       const { error } = await API.updateOrder(_editingOrderId, payload);
@@ -1006,8 +1014,71 @@
       else { showToast('✅ 订单已更新！', 'success'); closeEditModal(); await loadOrders(); }
     }
 
-    // 当前用户角色
-    let _currentRole = '';
+    // ========== 管理员留言系统 ==========
+    let _admMsgOrderId = null;
+
+    async function openAdmMsgPanel(orderId, invoiceNo) {
+      _admMsgOrderId = orderId;
+      document.getElementById('admMsgTitle').textContent = `💬 留言 - ${invoiceNo}`;
+      document.getElementById('admMsgBody').innerHTML = '<p class="msg-empty">加载中...</p>';
+      document.getElementById('admMsgInput').value = '';
+      document.getElementById('admMsgOverlay').classList.add('show');
+      const { data: msgs } = await API.getMessages(orderId);
+      renderAdmMessages(msgs || []);
+      // 标记所有非管理员留言为已读
+      await API.markMessagesRead(orderId, 'sales');
+      await API.markMessagesRead(orderId, 'warehouse');
+    }
+
+    function closeAdmMsgPanel() {
+      document.getElementById('admMsgOverlay').classList.remove('show');
+      _admMsgOrderId = null;
+      loadOrders();
+    }
+
+    function renderAdmMessages(msgs) {
+      const body = document.getElementById('admMsgBody');
+      if (!msgs || msgs.length === 0) { body.innerHTML = '<p class="msg-empty">暂无留言 💬</p>'; return; }
+      let html = '';
+      msgs.forEach(m => {
+        const isSelf = (m.author_role === 'admin' || m.author_role === 'super_admin');
+        const timeStr = new Date(m.created_at).toLocaleString('zh-CN', { month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' });
+        let roleLabel = '', cls = '';
+        if (isSelf) { roleLabel = '我'; cls = 'msg-self'; }
+        else if (m.author_role === 'sales') { roleLabel = '👤 业务·' + m.author_name; cls = 'msg-from-sales'; }
+        else if (m.author_role === 'warehouse') { roleLabel = '🏭 仓库'; cls = 'msg-from-wh'; }
+        else { roleLabel = '👤 ' + m.author_name; cls = 'msg-from-sales'; }
+        html += `<div class="msg-bubble ${cls}"><div>${App.escapeHtml(m.content).replace(/\n/g,'<br>')}</div><div class="msg-meta">${roleLabel} · ${timeStr}</div></div>`;
+      });
+      body.innerHTML = html;
+    }
+
+    async function sendAdmMessage() {
+      const input = document.getElementById('admMsgInput');
+      const content = input.value.trim();
+      if (!content) { showToast('请输入留言内容', 'error'); return; }
+      if (!_admMsgOrderId) return;
+      input.value = '';
+      const user = Auth.getUser();
+      const myRole = Auth.isSuper() ? 'super_admin' : 'admin';
+      const { error } = await API.addMessage({
+        order_id: _admMsgOrderId,
+        author_role: myRole,
+        author_name: user.full_name || user.email,
+        content: content
+      });
+      if (error) { showToast('发送失败: ' + error.message, 'error'); input.value = content; return; }
+      showToast('✅ 已发送', 'success');
+      const { data: msgs } = await API.getMessages(_admMsgOrderId);
+      renderAdmMessages(msgs || []);
+      setTimeout(() => { document.getElementById('admMsgBody').scrollTop = document.getElementById('admMsgBody').scrollHeight; }, 50);
+    }
+
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Enter' && !e.shiftKey && document.getElementById('admMsgOverlay').classList.contains('send')) {
+        sendAdmMessage();
+      }
+    });
   </script>
 
   <!-- 超管编辑弹窗 -->
@@ -1020,5 +1091,6 @@
       <div id="orderEditModalBody" style="padding:22px;"></div>
     </div>
   </div>
+  
 </body>
 </html>
