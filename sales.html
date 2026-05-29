@@ -56,8 +56,9 @@
     .oc-info { flex:1;min-width:160px;display:flex;flex-direction:column;gap:6px; }
     .oc-info-row { font-size:12px;display:flex;align-items:center;gap:4px;color:#555; }
     .oc-actions { display:flex;gap:6px;margin-top:10px;flex-wrap:wrap; }
+  </style>
 
-    // ========== 身份验证 ==========
+  <script>
     function showModal() { document.getElementById('codeModal').style.display='flex'; document.getElementById('codeInput').value=''; document.getElementById('codeError').textContent=''; setTimeout(()=>document.getElementById('codeInput').focus(),300); }
     function hideModal() { document.getElementById('codeModal').style.display='none'; }
     document.addEventListener('keydown', e => { if (e.key==='Enter'&&document.getElementById('codeModal').style.display==='flex') verifyCode(); });

@@ -339,9 +339,7 @@
         order_status:document.getElementById('e_order_status').value||null,
         salesperson_name:document.getElementById('e_salesperson_name').value.trim(),
         shipping_date:document.getElementById('e_shipping_date').value||null,
-        :document.getElementById('e_').value.trim()||null,
         warehouse_notes:document.getElementById('e_warehouse_notes').value.trim(),
-        :document.getElementById('e_').value.trim(),
         product_model:JSON.stringify(prods)
       };
       if(!payload.invoice_no||!ok){showToast('到款单号和至少一个型号为必填','error');return;}

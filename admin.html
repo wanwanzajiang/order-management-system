@@ -1001,7 +1001,9 @@
       else { showToast('✅ 订单已更新！', 'success'); closeEditModal(); await loadOrders(); }
     }
 
-    // ========== 管理员留言系统 ==========
+    // 当前用户角色
+    let _currentRole = '';
+  </script>
 
   <!-- 超管编辑弹窗 -->
   <div class="modal-overlay" id="orderEditModal" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:9999;opacity:0;pointer-events:none;transition:opacity .25s;">
@@ -1011,17 +1013,6 @@
         <button onclick="closeEditModal()" style="background:none;border:none;color:rgba(255,255,255,0.8);font-size:22px;cursor:pointer;">&times;</button>
       </div>
       <div id="orderEditModalBody" style="padding:22px;"></div>
-    </div>
-  </div>
-  <!-- 留言面板 -->
-  <div class="msg-overlay" id="admMsgOverlay" onclick="if(event.target===this)closeAdmMsgPanel()">
-    <div class="msg-panel">
-      <div class="msg-header"><h3 id="admMsgTitle">💬 订单留言</h3><button class="msg-close" onclick="closeAdmMsgPanel()">&times;</button></div>
-      <div class="msg-body" id="admMsgBody"><p class="msg-empty">加载中...</p></div>
-      <div class="msg-input-area">
-        <textarea id="admMsgInput" placeholder="留言..." rows="2"></textarea>
-        <button class="msg-send-btn" onclick="sendAdmMessage()">发送</button>
-      </div>
     </div>
   </div>
 </body>
