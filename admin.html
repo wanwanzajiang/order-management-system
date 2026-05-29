@@ -143,6 +143,7 @@
           </select>
           <button class="btn btn-secondary btn-sm" onclick="loadOrders()">刷新列表</button>
           <button class="btn btn-sm" onclick="exportOrdersCSV()" style="background:#27ae60;color:#fff;border-color:#27ae60;margin-left:auto;">📥 导出CSV</button>
+          <button class="btn btn-sm" onclick="cleanOldFiles()" style="background:#e07a5f;color:#fff;border-color:#e07a5f;">🧹 清理文件</button>
         </div>
         <div id="ordersContainer">
           <div class="loading">加载中...</div>
@@ -996,6 +997,46 @@
       a.click();
       URL.revokeObjectURL(url);
       showToast('✅ 已导出 ' + data.length + ' 条订单', 'success');
+    }
+
+    // ========== 清理旧文件 ==========
+    async function cleanOldFiles() {
+      const days = prompt('清理多少天前的文件？（例如：7、14、30）', '7');
+      if (!days || isNaN(days) || days < 1) return;
+      if (!confirm(`确定删除 ${days} 天前的所有文件吗？此操作不可恢复！`)) return;
+
+      showToast('正在清理...', 'info');
+      const cutoff = new Date(Date.now() - days * 86400000).toISOString();
+      const { data: { session } } = await SUPABASE.auth.getSession();
+      const token = session?.access_token;
+      if (!token) { showToast('请重新登录', 'error'); return; }
+
+      let deleted = 0;
+      try {
+        const { data: orders } = await SUPABASE.from('orders').select('id, file_ids');
+        if (!orders) { showToast('没有订单数据', 'error'); return; }
+
+        for (const order of orders) {
+          const files = Array.isArray(order.file_ids) ? order.file_ids : [];
+          if (!files.length) continue;
+          const keep = files.filter(f => !f.uploaded_at || f.uploaded_at >= cutoff);
+          const toDelete = files.filter(f => f.uploaded_at && f.uploaded_at < cutoff);
+          if (!toDelete.length) continue;
+
+          // 删除 Storage 中的文件
+          for (const f of toDelete) {
+            await fetch(`${CONFIG.SUPABASE_URL}/storage/v1/object/order-files/${f.id}`, {
+              method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` }
+            }).catch(() => {});
+          }
+          // 更新订单 file_ids
+          await SUPABASE.from('orders').update({ file_ids: keep.length ? keep : null }).eq('id', order.id);
+          deleted += toDelete.length;
+        }
+        showToast(`✅ 已清理 ${deleted} 个文件`, 'success');
+      } catch(e) {
+        showToast('清理失败: ' + e.message, 'error');
+      }
     }
 
   </script>
