@@ -64,8 +64,8 @@
       <div class="filter-bar">
         <label style="font-weight:500;color:#555;">状态筛选：</label>
         <select id="filterStatus" class="form-control" style="width:auto;min-width:140px;" onchange="loadOrders()">
-          <option value="">全部状态</option>
-          <option value="调货中" selected>调货中（优先处理）</option>
+          <option value="">全部</option>
+          <option value="调货中">调货中（优先处理）</option>
           <option value="路途中">路途中</option>
           <option value="已到货">已到货</option>
           <option value="已完结">已完结</option>
@@ -126,11 +126,12 @@
     }
 
     async function loadSalespeopleFilter() {
-      const { data } = await API.getSalespeople();
-      const sel = document.getElementById('filterSp');
+      const { data } = await SUPABASE.from('orders').select('salesperson_name');
       if (data && data.length > 0) {
-        data.forEach(sp => {
-          sel.innerHTML += `<option value="${App.escapeHtml(sp.name)}">${App.escapeHtml(sp.name)}</option>`;
+        const names = [...new Set(data.map(o => o.salesperson_name).filter(Boolean))].sort();
+        const sel = document.getElementById('filterSp');
+        names.forEach(name => {
+          sel.innerHTML += `<option value="${App.escapeHtml(name)}">${App.escapeHtml(name)}</option>`;
         });
       }
     }
