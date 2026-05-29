@@ -115,7 +115,10 @@
               </select>
               <small class="form-hint" style="color:#888;font-size:12px;">如无选项，请到「业务员管理」添加</small>
             </div>
-            
+            <div class="form-group">
+              <label for="salesNotes">业务员备注</label>
+              <input type="text" id="salesNotes" class="form-control">
+            </div>
           </div>
 
           <!-- 第三行：产品明细（核心区域） -->
@@ -580,13 +583,17 @@
           </td>
           <td>${App.escapeHtml(order.salesperson_name || '-')}</td>
           <td>${order.shipping_date || '-'}</td>
-          <td>${App.escapeHtml('' || '-')}</td>
+          <td>${App.escapeHtml(order.tracking_no || '-')}</td>
           <td>
             <input type="text" class="notes-input warehouse-notes"
               value="${App.escapeHtml(order.warehouse_notes || '')}"
               onblur="updateWarehouseNotes(${order.id}, this.value)" placeholder="仓库填写">
           </td>
-          
+          <td>
+            <input type="text" class="notes-input sales-notes"
+              value="${App.escapeHtml(order.sales_notes || '')}"
+              onblur="updateSalesNotes(${order.id}, this.value)" placeholder="业务备注">
+          </td>
           <td style="text-align:center;">${msgTag}</td>
           <td style="white-space:nowrap;font-size:12px;color:#999;">${App.formatDate(order.created_at)}</td>
           <td>
@@ -613,6 +620,7 @@
       const invoiceNo = document.getElementById('invoiceNo').value.trim();
       const orderDate = document.getElementById('orderDate').value;
       const salespersonName = document.getElementById('salespersonName').value;
+      const salesNotes = document.getElementById('salesNotes').value.trim();
 
       // 收集产品行数据
       const { products, hasValidData } = collectProducts();
@@ -646,7 +654,9 @@
         product_model: JSON.stringify(products),
         quantity: totalQty,
         delivery_date: null,
-        salesperson_name: salespersonName});
+        salesperson_name: salespersonName,
+        sales_notes: salesNotes
+      });
 
       setBtnLoading(btn, false, '添加订单');
 
@@ -865,7 +875,8 @@
       if (error) showToast('更新备注失败: ' + error.message, 'error');
     }
 
-     = await API.updateOrder(orderId, { sales_notes: notes });
+    async function updateSalesNotes(orderId, notes) {
+      const { error } = await API.updateOrder(orderId, { sales_notes: notes });
       if (error) {
         showToast('更新备注失败: ' + error.message, 'error');
       } else {
@@ -923,7 +934,9 @@
   <div class="form-group"><label>发货时间</label><input type="date" id="ei_ship" value="${order.shipping_date || ''}" style="width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:6px;"></div>
 </div>
 <div class="form-row-c" style="margin-bottom:12px;">
-<div class="form-group"><label>仓库备注</label><input type="text" id="ei_wnotes" value="${App.escapeHtml(order.warehouse_notes || '')}" style="width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:6px;"></div>
+  <div class="form-group"><label>快递单号</label><input type="text" id="ei_track" value="${App.escapeHtml(order.tracking_no || '')}" style="width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:6px;"></div>
+  <div class="form-group"><label>仓库备注</label><input type="text" id="ei_wnotes" value="${App.escapeHtml(order.warehouse_notes || '')}" style="width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:6px;"></div>
+  <div class="form-group"><label>业务备注</label><input type="text" id="ei_snotes" value="${App.escapeHtml(order.sales_notes || '')}" style="width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:6px;"></div>
 </div>
 
 <div style="border:1.5px solid #667eea;border-radius:10px;padding:14px;background:#fafbff;margin:10px 0;">
@@ -996,7 +1009,9 @@
         order_status: document.getElementById('ei_status').value || null,
         salesperson_name: document.getElementById('ei_sp').value.trim(),
         shipping_date: document.getElementById('ei_ship').value || null,
+        tracking_no: document.getElementById('ei_track').value.trim() || null,
         warehouse_notes: document.getElementById('ei_wnotes').value.trim(),
+        sales_notes: document.getElementById('ei_snotes').value.trim(),
         product_model: JSON.stringify(products)
       };
       if (!payload.invoice_no || !ok) { showToast('发票号和至少一个型号必填', 'error'); return; }

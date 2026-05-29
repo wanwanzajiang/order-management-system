@@ -285,7 +285,9 @@
             <div class="oc-info">
               <div class="oc-info-row">📦 数量：<strong>${order.quantity||'-'}</strong></div>
               <div class="oc-info-row">🚚 发货：${order.shipping_date||'<span style="color:#ccc;">待填写</span>'}</div>
+              <div class="oc-info-row">📮 快递：${order.tracking_no?App.escapeHtml(order.tracking_no):'<span style="color:#ccc;">待填写</span>'}</div>
               <div class="oc-info-row" title="${App.escapeHtml(order.warehouse_notes||'')}">📝 仓库备注：${App.escapeHtml((order.warehouse_notes||'-').substring(0,20))}${(order.warehouse_notes||'').length>20?'...':''}</div>
+              <div class="oc-info-row" title="${App.escapeHtml(order.sales_notes||'')}">📝 业务备注：${App.escapeHtml((order.sales_notes||'-').substring(0,20))}${(order.sales_notes||'').length>20?'...':''}</div>
             </div>
           </div>
           <div class="oc-actions">

@@ -230,7 +230,7 @@
             </td>
             <td>
               <input type="text" class="form-control tracking-input"
-                value="${App.escapeHtml('' || '')}"
+                value="${App.escapeHtml(order.tracking_no || '')}"
                 onblur="updateTracking(${order.id}, this.value)"
                 placeholder="填写快递单号"
                 style="width:150px;padding:4px 6px;font-size:13px;"
@@ -303,7 +303,8 @@
       else console.log('[Warehouse] 发货时间已更新:', dateVal);
     }
 
-     = await API.updateOrder(id, { tracking_no: noVal.trim() || null });
+    async function updateTracking(id, noVal) {
+      const { error } = await API.updateOrder(id, { tracking_no: noVal.trim() || null });
       if (error) showToast('保存单号失败: ' + error.message, 'error');
       else console.log('[Warehouse] 快递单号已更新:', noVal);
     }
