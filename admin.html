@@ -1,997 +1,195 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>进度回复 - 管理员</title>
-  <link rel="stylesheet" href="css/style.css?v=1780058146">
-  <style>
-    #orderEditModal.show{opacity:1;pointer-events:auto;}
-    #orderEditModal.show #orderEditBox{transform:translateY(0);}
-    .form-row-c{display:flex;gap:12px;flex-wrap:wrap;}
-    
-  </style>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>进度回复系统 - 管理</title>
+<link rel="stylesheet" href="css/style.css?v=2">
+<style>
+body{background:#f8f6f2;font-family:-apple-system,BlinkMacSystemFont,sans-serif;margin:0;padding:20px}
+.header{display:flex;justify-content:space-between;align-items:center;padding:10px 0}
+.tabs{display:flex;gap:8px;margin:12px 0}
+.tab{padding:8px 20px;border:1px solid #ddd;border-radius:10px;background:#fff;cursor:pointer;font-size:14px}
+.tab.active{background:#e07a5f;color:#fff;border-color:#e07a5f}
+.panel{display:none;background:#fff;border-radius:12px;padding:20px;box-shadow:0 2px 10px rgba(0,0,0,.05)}
+.panel.active{display:block}
+.stats{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:16px}
+.stat{padding:16px 24px;background:#f5f0eb;border-radius:12px;flex:1;min-width:100px;text-align:center}
+.stat .num{font-size:28px;font-weight:700;color:#e07a5f}
+.stat .lbl{font-size:12px;color:#888}
+table{width:100%;border-collapse:collapse}
+th{background:#f5f0eb;padding:8px;font-size:12px;text-align:left;color:#555}
+td{padding:8px;font-size:13px;border-bottom:1px solid#f0f0f0}
+input,select{padding:6px 10px;border:1px solid #ddd;border-radius:8px;font-size:13px}
+.btn{padding:8px 16px;border:1px solid #ddd;border-radius:8px;background:#fff;cursor:pointer;font-size:13px}
+.btn-danger{background:#e07a5f;color:#fff;border:none}
+</style>
 </head>
 <body>
-  <header class="header">
-    <div class="container">
-      <h1>📦 进度回复系统 - 管理员</h1>
-      <div class="header-info">
-        <div class="user-info">
-          <span id="userName">管理员</span>
-          <span class="role-badge" id="userRole">管理员</span>
-          <span id="superEntry" style="display:none;">
-            <a href="console.html" style="font-size:11px;color:#667eea;text-decoration:none;margin-left:8px;padding:3px 10px;background:#f0f4ff;border-radius:12px;">⚙ 控制台</a>
-          </span>
-        </div>
-        <button class="btn btn-secondary btn-sm" onclick="Auth.logout()">退出登录</button>
-      </div>
-    </div>
-  </header>
-
-  <main class="container">
-
-    <!-- Tab 导航 -->
-    <div class="tab-nav" id="tabNav">
-      <button class="tab-btn active" data-tab="dashboard" onclick="switchTab('dashboard')">📊 数据概览</button>
-      <button class="tab-btn" data-tab="orders" onclick="switchTab('orders')">📋 订单新增</button>
-      <button class="tab-btn" data-tab="salespeople" onclick="switchTab('salespeople')">👥 业务员管理</button>
-    </div>
-
-    <!-- ===== Tab 1: 数据概览 ===== -->
-    <div class="tab-content active" id="tab-dashboard">
-      <div class="stats-grid" id="statsGrid">
-        <div class="stat-card stat-total"><div class="stat-number">-</div><div class="stat-label">总订单数</div></div>
-        <div class="stat-card stat-pending"><div class="stat-number">-</div><div class="stat-label">调货中</div></div>
-        <div class="stat-card stat-transit"><div class="stat-number">-</div><div class="stat-label">路途中</div></div>
-        <div class="stat-card stat-arrived"><div class="stat-number">-</div><div class="stat-label">已到货</div></div>
-        <div class="stat-card stat-completed"><div class="stat-number">-</div><div class="stat-label">已完结</div></div>
-        <div class="stat-card stat-users"><div class="stat-number">-</div><div class="stat-label">业务员人数</div></div>
-      </div>
-
-      <div class="card">
-        <h3 class="card-title">📈 业务员订单排行</h3>
-        <div id="salesStatsContainer">
-          <div class="loading">加载中...</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- ===== Tab 2: 进度回复 ===== -->
-    <div class="tab-content" id="tab-orders" style="display:none;">
-      <!-- 新增订单表单（多产品版） -->
-      <div class="card">
-        <h3 class="card-title">➕ 新增订单</h3>
-        <form id="addOrderForm">
-          <!-- 第一行：基础信息 -->
-          <div class="form-row">
-            <div class="form-group">
-              <label for="invoiceNo">到款单号 / 单号 *</label>
-              <input type="text" id="invoiceNo" class="form-control" required>
-            </div>
-            <div class="form-group">
-              <label for="orderDate">单据日期</label>
-              <input type="date" id="orderDate" class="form-control">
-            </div>
-          </div>
-
-          <!-- 第二行：所属业务员 -->
-          <div class="form-row">
-            <div class="form-group">
-              <label for="salespersonName">所属业务员 *</label>
-              <select id="salespersonName" class="form-control" required>
-                <option value=""></option>
-              </select>
-              <small class="form-hint" style="color:#888;font-size:12px;">如无选项，请到「业务员管理」添加</small>
-            </div>
-            <div class="form-group">
-              <label for="salesNotes">业务员备注</label>
-              <input type="text" id="salesNotes" class="form-control">
-            </div>
-          </div>
-
-          <!-- 第三行：产品明细（核心区域） -->
-          <div class="form-group">
-            <label>📦 产品明细 *</label>
-            <div style="display:flex;gap:8px;margin-bottom:8px;font-size:11px;color:#999;">
-              <span>💡 支持两种方式：</span>
-              <span style="color:#2e7d32;background:#e8f5e9;padding:1px 6px;border-radius:8px;">从Excel/到款单复制粘贴</span>
-              <span style="color:#666;background:#f5f5f5;padding:1px 6px;border-radius:8px;">或手动逐行添加</span>
-            </div>
-
-            <!-- 产品明细容器 -->
-            <div id="productsContainer" style="border:1.5px solid #667eea;border-radius:10px;padding:14px;background:#fafbff;">
-              <!-- 表头 -->
-              <div style="display:flex;gap:6px;padding:6px 8px;background:#f0f4ff;border-radius:6px 6px 0 0;font-size:11px;color:#666;font-weight:500;">
-                <span style="width:28px;"></span>
-                <span style="flex:1.1;min-width:60px;">品牌</span>
-                <span style="flex:1.4;min-width:90px;">型号</span>
-                <span style="width:55px;text-align:center;">数量</span>
-                <span style="flex:1;min-width:70px;">货期/交期</span>
-                <span style="width:26px;"></span>
-              </div>
-              <!-- 动态产品行会插入到这里 -->
-              <div id="productRows"></div>
-
-              <!-- 操作按钮 -->
-              <div style="display:flex;gap:8px;margin-top:10px;padding-top:10px;border-top:1px dashed #ddd;">
-                <button type="button" onclick="addProductRow()" class="btn btn-sm" style="background:#f0f4ff;color:#667eea;border:1px dashed #99aaff;font-size:12px;padding:6px 14px;">+ 添加一行</button>
-                <button type="button" onclick="pasteFromExcel()" class="btn btn-sm" style="background:#fff8e6;color:#b8860b;border:1px dashed #e6c87a;font-size:12px;padding:6px 14px;">📋 从Excel粘贴</button>
-                <span id="productSummary" style="margin-left:auto;font-size:12px;color:#667eea;font-weight:500;align-self:center;"></span>
-              </div>
-            </div>
-          </div>
-
-          <button type="submit" class="btn btn-primary" style="margin-top:12px;">添加订单</button>
-        </form>
-      </div>
-
-      <!-- 订单筛选 + 列表 -->
-      <div class="card">
-        <h3 class="card-title">📋 全部订单</h3>
-        <div class="filter-bar">
-          <select id="filterStatus" class="form-control" onchange="loadOrders()" style="width:auto;min-width:140px;">
-            <option value="">全部状态</option>
-            <option value="__empty__">- 待填写 -</option>
-            <option value="调货中">调货中</option>
-            <option value="调货中">调货中</option>
-            <option value="路途中">路途中</option>
-            <option value="已到货">已到货</option>
-            <option value="已完结">已完结</option>
-          </select>
-          <select id="filterSalesperson" class="form-control" onchange="loadOrders()" style="width:auto;min-width:140px;">
-            <option value="">全部业务员</option>
-          </select>
-          <button class="btn btn-secondary btn-sm" onclick="loadOrders()">刷新列表</button>
-        </div>
-        <div id="ordersContainer">
-          <div class="loading">加载中...</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- ===== Tab 3: 业务员管理（原用户管理改造） ===== -->
-    <div class="tab-content" id="tab-salespeople" style="display:none;">
-      <div class="card">
-        <h3 class="card-title">➕ 添加业务员</h3>
-        <p style="font-size:13px;color:#666;margin-bottom:16px;">业务员独立于登录账号。每个业务员有唯一<strong>识别码</strong>，用于登录后身份确认和数据隔离。</p>
-        <form id="addSalespersonForm">
-          <div class="form-row">
-            <div class="form-group" style="max-width:200px;">
-              <label for="newSpName">业务员姓名 *</label>
-              <input type="text" id="newSpName" class="form-control" required>
-            </div>
-            <div class="form-group" style="max-width:180px;">
-              <label for="newSpCode">识别码（选填）</label>
-              <input type="text" id="newSpCode" class="form-control" placeholder="留空自动生成 SPxxx">
-              <small class="form-hint" style="color:#aaa;font-size:11px;">唯一标识，业务员登录时使用</small>
-            </div>
-          </div>
-          <button type="submit" class="btn btn-primary">添加业务员</button>
-        </form>
-      </div>
-
-      <div class="card">
-        <h3 class="card-title">👥 业务员列表</h3>
-        <p style="font-size:12px;color:#888;margin-bottom:12px;">💡 可编辑姓名或删除。删除后历史订单中的名字会保留。</p>
-        <div id="spContainer">
-          <div class="loading">加载中...</div>
-        </div>
-      </div>
-    </div>
-
-  </main>
-
-  <footer class="footer">
-    © <span id="footerYear"></span> 进度回复系统 · 管理员面板
-  </footer>
-
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="js/config.js?v=1780058146"></script>
-  <script src="js/auth.js?v=1780058146"></script>
-  <script src="js/api.js?v=1780058146"></script>
-  <script src="js/app.js?v=1780058146"></script>
-  <script>
-    // 页脚年份
-    document.getElementById('footerYear').textContent = new Date().getFullYear();
-
-    if (!Auth.requireRole([CONFIG.ROLES.ADMIN, CONFIG.ROLES.SUPER])) {
-      // 已重定向
-    } else {
-      init();
-    }
-
-    // ========== Tab 切换 ==========
-    function switchTab(tabName) {
-      document.querySelectorAll('.tab-btn').forEach(btn => {
-        btn.classList.toggle('active', btn.dataset.tab === tabName);
-      });
-      document.querySelectorAll('.tab-content').forEach(content => {
-        content.style.display = 'none';
-        content.classList.remove('active');
-      });
-      const target = document.getElementById('tab-' + tabName);
-      target.style.display = '';
-      target.classList.add('active');
-
-      if (tabName === 'dashboard') loadDashboard();
-      if (tabName === 'orders') { loadSalespeopleSelect(); loadOrders(); }
-      if (tabName === 'salespeople') loadSalespeopleList();
-    }
-
-    // ========== 初始化 ==========
-    let productRowCount = 0;
-
-    async function init() {
-      const user = Auth.getUser();
-      document.getElementById('userName').textContent = user.full_name || user.email;
-      document.getElementById('userRole').textContent = App.getRoleName(user.role);
-      if (user.role === CONFIG.ROLES.SUPER) {
-        document.getElementById('superEntry').style.display = '';
-      }
-
-      // 默认填今天日期
-      document.getElementById('orderDate').value = new Date().toISOString().split('T')[0];
-
-      // 初始化时默认添加一行产品
-      addProductRow();
-
-      await loadDashboard();
-    }
-
-    // ========== 动态产品行管理 ==========
-    function addProductRow(data) {
-      productRowCount++;
-      const rowId = 'product-row-' + productRowCount;
-      const container = document.getElementById('productRows');
-
-      const row = document.createElement('div');
-      row.id = rowId;
-      row.style.cssText = 'display:flex;gap:6px;align-items:center;padding:7px 8px;margin-bottom:3px;background:#fff;border-radius:4px;border:0.5px solid #e0e0e0;';
-      row.innerHTML = `
-        <span style="font-size:11px;color:#aaa;width:28px;text-align:center;">#${productRowCount}</span>
-        <input type="text" class="form-control p-brand" placeholder="品牌" value="${App.escapeHtml(data ? data.brand || '' : '')}" style="flex:1.1;min-width:60px;padding:5px 7px;font-size:12px;border-radius:5px;">
-        <input type="text" class="form-control p-model" placeholder="型号" value="${App.escapeHtml(data ? data.model || '' : '')}" style="flex:1.4;min-width:90px;padding:5px 7px;font-size:12px;border-radius:5px;">
-        <input type="number" class="form-control p-qty" placeholder="数量" value="${data ? (data.qty || '') : ''}" min="0" style="width:55px;padding:5px 4px;font-size:12px;border-radius:5px;text-align:center;">
-        <input type="text" class="form-control p-delivery" placeholder="货期" value="${App.escapeHtml(data ? (data.delivery || '') : '')}" style="flex:1;min-width:70px;padding:5px 7px;font-size:12px;border-radius:5px;">
-        <button type="button" onclick="removeProductRow('${rowId}')" style="padding:0 6px;background:none;border:none;cursor:pointer;color:#e24b4a;font-size:17px;line-height:1;" title="删除此行">×</button>
-      `;
-      container.appendChild(row);
-
-      // 绑定变化事件自动更新汇总
-      row.querySelectorAll('input').forEach(input => {
-        input.addEventListener('input', updateProductSummary);
-      });
-
-      updateProductSummary();
-      return rowId;
-    }
-
-    function removeProductRow(rowId) {
-      const row = document.getElementById(rowId);
-      if (row && document.querySelectorAll('#productRows > div').length > 1) {
-        row.remove();
-        // 重新编号
-        renumberProductRows();
-        updateProductSummary();
-      } else {
-        showToast('至少保留一行产品', 'error');
-      }
-    }
-
-    function renumberProductRows() {
-      const rows = document.querySelectorAll('#productRows > div');
-      rows.forEach((row, index) => {
-        row.querySelector('span').textContent = '#' + (index + 1);
-      });
-      productRowCount = rows.length;
-    }
-
-    function updateProductSummary() {
-      let totalQty = 0;
-      let itemCount = 0;
-      document.querySelectorAll('#productRows .p-qty').forEach(input => {
-        const val = parseInt(input.value);
-        if (!isNaN(val) && val > 0) {
-          totalQty += val;
-          itemCount++;
-        }
-      });
-      const el = document.getElementById('productSummary');
-      if (itemCount > 0) {
-        el.textContent = `共 ${itemCount} 个产品 · 总数量 ${totalQty}`;
-      } else {
-        el.textContent = '';
-      }
-    }
-
-    // 从 Excel / 到款单 粘贴（Tab分隔自动拆分）
-    function pasteFromExcel() {
-      // 创建临时 textarea 触发粘贴
-      const ta = document.createElement('textarea');
-      ta.style.position = 'fixed';
-      ta.style.opacity = '0';
-      ta.style.left = '-9999px';
-      document.body.appendChild(ta);
-      ta.focus();
-
-      navigator.clipboard.readText().then(text => {
-        if (!text || !text.trim()) {
-          showToast('剪贴板为空，请先复制表格内容（Ctrl+C）', 'error');
-          document.body.removeChild(ta);
-          return;
-        }
-
-        // 解析：按换行分行，按 Tab 分列
-        const lines = text.trim().split(/\r?\n/).filter(line => line.trim());
-        if (lines.length === 0) {
-          showToast('未识别到有效内容', 'error');
-          document.body.removeChild(ta);
-          return;
-        }
-
-        // 先清空现有行
-        document.getElementById('productRows').innerHTML = '';
-        productRowCount = 0;
-
-        lines.forEach((line, idx) => {
-          const cols = line.split('\t');
-          addProductRow({
-            brand: cols[0] ? cols[0].trim() : '',
-            model: cols[1] ? cols[1].trim() : '',
-            qty: cols[2] ? cols[2].trim() : '',
-            delivery: cols[3] ? cols[3].trim() : ''
-          });
-        });
-
-        showToast(`✅ 已导入 ${lines.length} 行产品数据`, 'success');
-        document.body.removeChild(ta);
-      }).catch(() => {
-        // 浏览器不支持 clipboard API，提示用户手动粘贴到隐藏区域
-        showToast('浏览器不支持自动读取剪贴板，请使用「+ 添加一行」手动输入', 'error');
-        document.body.removeChild(ta);
-      });
-    }
-
-    // 收集产品行数据为 JSON 数组
-    function collectProducts() {
-      const products = [];
-      let hasValidData = false;
-      document.querySelectorAll('#productRows > div').forEach(row => {
-        const brand = row.querySelector('.p-brand').value.trim();
-        const model = row.querySelector('.p-model').value.trim();
-        const qtyVal = row.querySelector('.p-qty').value.trim();
-        const delivery = row.querySelector('.p-delivery').value.trim();
-        const qty = qtyVal ? parseInt(qtyVal) : 0;
-
-        // 至少有型号才算有效行
-        if (model || brand) {
-          products.push({ brand, model, qty: Math.max(0, qty), delivery });
-          if (model) hasValidData = true;
-        }
-      });
-      return { products, hasValidData };
-    }
-
-    // ========== Dashboard 数据概览 ==========
-    let salesSortDesc = true;
-    let orderDateSortAsc = false;
-
-    function toggleSalesSort() {
-      salesSortDesc = !salesSortDesc;
-      document.getElementById('salesSortIcon').textContent = salesSortDesc ? '↓ 降序' : '↑ 升序';
-      loadDashboard();
-    }
-
-    function toggleOrderDateSort() {
-      orderDateSortAsc = !orderDateSortAsc;
-      const icon = document.getElementById('orderDateSortIcon');
-      if (icon) icon.textContent = orderDateSortAsc ? '↑ 升序' : '↓ 降序';
-      loadOrders();
-    }
-
-    async function loadDashboard() {
-      const stats = await API.getOrderStats();
-
-      document.querySelector('.stat-total .stat-number').textContent = stats.total;
-      document.querySelector('.stat-pending .stat-number').textContent = stats.by_status['调货中'] || 0;
-      document.querySelector('.stat-transit .stat-number').textContent = stats.by_status['路途中'] || 0;
-      document.querySelector('.stat-arrived .stat-number').textContent = stats.by_status['已到货'] || 0;
-      document.querySelector('.stat-completed .stat-number').textContent = stats.by_status['已完结'] || 0;
-      document.querySelector('.stat-users .stat-number').textContent = stats.by_sales.length;
-
-      const container = document.getElementById('salesStatsContainer');
-      if (!stats.by_sales || stats.by_sales.length === 0) {
-        App.showEmpty(container, '暂无业务员数据，请先添加业务员');
-        return;
-      }
-
-      let html = `
-        <div class="table-wrapper">
-          <table>
-            <thead><tr><th>业务员姓名</th>
-              <th style="cursor:pointer;user-select:none;" onclick="toggleSalesSort()">
-                订单数量
-                <span id="salesSortIcon" style="margin-left:4px;font-size:11px;color:#999;">↓ 降序</span>
-              </th></tr></thead>
-            <tbody>`;
-      // 按订单数量排序
-      const sortedSales = [...stats.by_sales].sort((a, b) =>
-        salesSortDesc ? b.order_count - a.order_count : a.order_count - b.order_count
-      );
-
-      sortedSales.forEach(s => {
-        html += `<tr>
-          <td><strong>${App.escapeHtml(s.name)}</strong></td>
-          <td><span class="status-badge" style="background:#667eea;color:white;padding:2px 10px;border-radius:10px;">${s.order_count}</span></td>
-        </tr>`;
-      });
-      html += '</tbody></table></div>';
-      container.innerHTML = html;
-    }
-
-    // ========== 进度回复 ==========
-
-    // 加载业务员下拉选项（用于新建订单）
-    async function loadSalespeopleSelect() {
-      const { data, error } = await API.getSalespeople();
-      const select = document.getElementById('salespersonName');
-      const filterSelect = document.getElementById('filterSalesperson');
-
-      let options = '<option value=""></option>';
-      let filterOptions = '<option value="">全部业务员</option>';
-
-      if (data && data.length > 0) {
-        data.forEach(sp => {
-          options += `<option value="${App.escapeHtml(sp.name)}">${App.escapeHtml(sp.name)}</option>`;
-          filterOptions += `<option value="${App.escapeHtml(sp.name)}">${App.escapeHtml(sp.name)}</option>`;
-        });
-      } else {
-        options = '<option value="">暂无业务员（请先在「业务员管理」中添加）</option>';
-      }
-
-      select.innerHTML = options;
-      filterSelect.innerHTML = filterOptions;
-    }
-
-    async function loadOrders() {
-      const container = document.getElementById('ordersContainer');
-      App.showLoading(container);
-
-      const filters = {};
-      const statusFilter = document.getElementById('filterStatus').value;
-      const spFilter = document.getElementById('filterSalesperson').value;
-      if (statusFilter === '__empty__') {
-        // 筛选状态为空的订单
-        filters._status_empty = true;
-      } else if (statusFilter) {
-        filters.order_status = statusFilter;
-      }
-      if (spFilter) filters.salesperson_name = spFilter;
-
-      // 使用原始查询以支持空状态筛选
-      let query = SUPABASE
-        .from('orders')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (statusFilter === '__empty__') {
-        query = query.is('order_status', null);
-      } else if (statusFilter) {
-        query = query.eq('order_status', statusFilter);
-      }
-      if (spFilter) query = query.eq('salesperson_name', spFilter);
-
-      const { data, error } = await query;
-
-      if (error) {
-        App.showError(container, '加载订单失败: ' + error.message);
-        return;
-      }
-      if (!data || data.length === 0) {
-        App.showEmpty(container, '暂无订单数据');
-        return;
-      }
-
-
-      renderOrders(data);
-    }
-
-    function renderOrders(orders) {
-      const container = document.getElementById('ordersContainer');
-
-      orders.sort((a, b) => {
-        const da = a.order_date || '', db = b.order_date || '';
-        return orderDateSortAsc ? da.localeCompare(db) : db.localeCompare(da);
-      });
-
-      let html = `
-        <div class="table-wrapper" style="overflow-x:auto;">
-          <table>
-            <thead>
-              <tr>
-                <th>到款单号</th><th style="cursor:pointer;user-select:none;white-space:nowrap;" onclick="toggleOrderDateSort()">单据日期 <span id="orderDateSortIcon" style="font-size:11px;color:#999;">↓ 降序</span></th><th style="min-width:200px;">产品明细</th>
-                <th>总数量</th><th>状态</th>
-                <th>业务员</th><th>预计发货时间</th><th>快递单号</th>
-                
-                <th>创建时间</th><th>操作</th>
-              </tr>
-            </thead>
-            <tbody>`;
-
-      orders.forEach(order => {
-        // 解析产品明细（兼容旧格式纯文本和新格式JSON）
-        const productsHtml = renderProductDetail(order.product_model);
-
-        const statusClass = {
-          '调货中': 'status-pending',
-          '路途中': 'status-transit',
-          '已到货': 'status-arrived',
-          '已完结': 'status-completed'
-        }[order.order_status] || '';
-
-        
-          <td style="white-space:nowrap;font-size:12px;color:#999;">${App.formatDate(order.created_at)}</td>
-          <td>
-            <button class="btn btn-danger btn-sm" onclick="deleteOrder(${order.id})">删除</button>
-            <button id="eb-${order.id}" class="btn btn-sm" style="display:none;background:#667eea;color:#fff;border-color:#667eea;margin-left:4px;" onclick="openOrderEditor(${order.id})">✏️ 编辑</button>
-          </td>
-        </tr>`;
-      });
-
-      html += '</tbody></table></div>';
-      container.innerHTML = html;
-
-      if (Auth.isSuper()) {
-        orders.forEach(o => {
-          const b = document.getElementById('eb-' + o.id);
-          if (b) b.style.display = '';
-        });
-      }
-    }
-
-    // 新增订单（多产品版 - 动态行）
-    document.getElementById('addOrderForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const invoiceNo = document.getElementById('invoiceNo').value.trim();
-      const orderDate = document.getElementById('orderDate').value;
-      const salespersonName = document.getElementById('salespersonName').value;
-      // 收集产品行数据
-      const { products, hasValidData } = collectProducts();
-
-      if (!invoiceNo || !hasValidData || !salespersonName) {
-        showToast('请填写所有必填字段（带*号）', 'error');
-        return;
-      }
-
-      if (products.length === 0) {
-        showToast('请至少添加一行有效产品（至少填型号）', 'error');
-        return;
-      }
-
-      // 计算总数量
-      const totalQty = products.reduce((sum, p) => sum + (p.qty || 0), 0);
-
-      // 到款单号重复检测
-      const existing = await API.getOrderByInvoice(invoiceNo);
-      if (existing.data) {
-        showToast('该到款单号已存在，请检查后重新输入', 'error');
-        return;
-      }
-
-      const btn = e.target.querySelector('button[type="submit"]');
-      setBtnLoading(btn, true, '添加中...');
-
-      const { error } = await API.createOrder({
-        invoice_no: invoiceNo,
-        order_date: orderDate || null,
-        product_model: JSON.stringify(products),
-        quantity: totalQty,
-        delivery_date: null,
-        salesperson_name: salespersonName
-      });
-
-      setBtnLoading(btn, false, '添加订单');
-
-      if (error) {
-        showToast('添加失败: ' + error.message, 'error');
-        return;
-      }
-
-      showToast('✅ 订单添加成功！', 'success');
-      e.target.reset();
-      document.getElementById('orderDate').value = new Date().toISOString().split('T')[0];
-
-      // 重置产品行
-      document.getElementById('productRows').innerHTML = '';
-      productRowCount = 0;
-      addProductRow();
-
-      await loadOrders();
-    });
-
-    // ========== 业务员管理 ==========
-    async function loadSalespeopleList() {
-      const container = document.getElementById('spContainer');
-      App.showLoading(container);
-
-      const { data, error } = await API.getAllSalespeople(true); // 包含已停用的
-
-      if (error) {
-        App.showError(container, '加载业务员失败: ' + error.message);
-        return;
-      }
-      if (!data || data.length === 0) {
-        App.showEmpty(container, '暂无业务员，请在上方添加');
-        return;
-      }
-
-      renderSalespeople(data);
-    }
-
-    function renderSalespeople(list) {
-      const container = document.getElementById('spContainer');
-      let html = `
-        <div class="table-wrapper">
-          <table>
-            <thead>
-              <tr>
-                <th>业务员姓名</th><th>识别码</th><th>状态</th><th>创建时间</th><th>操作</th>
-              </tr>
-            </thead>
-            <tbody>`;
-
-      list.forEach(sp => {
-        const isActive = sp.is_active !== false;
-        html += `<tr data-id="${sp.id}">
-          <td>
-            <input type="text" class="inline-edit" id="spname-${sp.id}"
-              value="${App.escapeHtml(sp.name)}"
-              style="width:120px;padding:4px 8px;border:1px solid #ddd;border-radius:4px;"
-              ${!isActive ? 'disabled style="background:#f5f5f5;color:#999;"' : ''}>
-          </td>
-          <td>
-            <input type="text" class="inline-edit" id="spcode-${sp.id}" value="${App.escapeHtml(sp.access_code || '')}" style="width:100px;padding:4px 8px;border:1px solid #ddd;border-radius:4px;">
-          </td>
-          <td>
-            <span class="status-badge" style="
-              background:${isActive ? '#e8f5e9' : '#fff3e0'};
-              color:${isActive ? '#2e7d32' : '#e65100'};
-              padding:2px 10px;border-radius:10px;font-size:12px;">
-              ${isActive ? '✅ 正常' : '⛔ 已停用'}
-            </span>
-          </td>
-          <td style="font-size:12px;color:#999;">${App.formatDate(sp.created_at)}</td>
-          <td>
-            ${isActive
-              ? `<button class="btn btn-sm btn-primary" style="font-size:11px;padding:4px 10px;" onclick="saveSpName(${sp.id})">保存改名</button>
-                 <button class="btn btn-sm btn-danger" style="font-size:11px;padding:4px 10px;" onclick="removeSp(${sp.id})">停用</button>`
-              : `<button class="btn btn-sm btn-success" style="font-size:11px;padding:4px 10px;" onclick="restoreSp(${sp.id})">✅ 恢复使用</button>`
-            }
-          </td>
-        </tr>`;
-      });
-
-      html += '</tbody></table></div>';
-      container.innerHTML = html;
-    }
-
-    // 添加业务员
-    document.getElementById('addSalespersonForm').addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const name = document.getElementById('newSpName').value.trim();
-      const code = document.getElementById('newSpCode').value.trim();
-
-      if (!name) {
-        showToast('请输入业务员姓名', 'error');
-        return;
-      }
-
-      const btn = e.target.querySelector('button[type="submit"]');
-      setBtnLoading(btn, true, '添加中...');
-
-      // 构建数据，识别码留空则由后端自动生成
-      const spData = { name: name, is_active: true };
-      if (code) spData.access_code = code.toUpperCase().replace(/[^A-Z0-9]/g, '');
-
-      const { data, error } = await API.addSalesperson(spData);
-
-      setBtnLoading(btn, false, '添加业务员');
-
-      if (error) {
-        if (error.message && error.message.includes('unique')) {
-          if (error.message.includes('access_code')) {
-            showToast('该识别码已存在，请换一个', 'error');
-          } else {
-            showToast('该业务员姓名已存在', 'error');
-          }
-        } else {
-          showToast('添加失败: ' + error.message, 'error');
-        }
-        return;
-      }
-
-      showToast(`✅ 业务员「${name}」已添加！识别码：${data.access_code || '(自动生成)'}`, 'success');
-      e.target.reset();
-      await loadSalespeopleList();
-    });
-
-    // 保存业务员改名
-    async function saveSpName(id) {
-      const input = document.getElementById('spname-' + id);
-      const newName = input.value.trim();
-
-      if (!newName) {
-        showToast('姓名不能为空', 'error');
-        return;
-      }
-
-      const codeInput = document.getElementById('spcode-' + id);
-      const newCode = codeInput ? codeInput.value.trim().toUpperCase() : '';
-      const updates = { name: newName };
-      if (newCode) updates.access_code = newCode;
-      const { error } = await API.updateSalesperson(id, updates);
-
-      if (error) {
-        if (error.message && error.message.includes('unique')) {
-          showToast('该名称已被使用', 'error');
-        } else {
-          showToast('保存失败: ' + error.message, 'error');
-        }
-        return;
-      }
-
-      showToast('✅ 姓名已更新', 'success');
-      await loadSalespeopleList();
-    }
-
-    // 停用业务员（软删除）
-    async function removeSp(id) {
-      if (!confirm('确定要停用此业务员吗？\n\n⚠️ 停用后不会删除历史订单，但新建订单时不再显示此姓名。')) return;
-
-      const { error } = await API.deleteSalesperson(id);
-      if (error) {
-        showToast('操作失败: ' + error.message, 'error');
-      } else {
-        showToast('✅ 已停用（可随时恢复）', 'success');
-        await loadSalespeopleList();
-      }
-    }
-
-    // 恢复已停用的业务员
-    async function restoreSp(id) {
-      const { error } = await API.updateSalesperson(id, { is_active: true });
-      if (error) {
-        showToast('恢复失败: ' + error.message, 'error');
-      } else {
-        showToast('✅ 已恢复使用！', 'success');
-        await loadSalespeopleList();
-      }
-    }
-
-    // ========== 产品明细渲染 ==========
-    function renderProductDetail(productModel) {
-      if (!productModel) return '<span style="color:#ccc;">-</span>';
-
-      // 尝试解析为JSON（新格式）
-      let products = null;
-      if (typeof productModel === 'string' && productModel.startsWith('[')) {
-        try { products = JSON.parse(productModel); } catch(e) {}
-      }
-
-      if (products && Array.isArray(products) && products.length > 0) {
-        let html = '<div style="font-size:11px;">';
-        products.forEach((p, i) => {
-          const brand = p.brand ? `<span style="background:#e8f0fe;color:#1a56db;padding:1px 5px;border-radius:3px;margin-right:3px;">${App.escapeHtml(p.brand)}</span>` : '';
-          const model = `<strong>${App.escapeHtml(p.model || '-')}</strong>`;
-          const qty = p.qty ? `<span style="color:#e67e22;">×${p.qty}</span>` : '';
-          const delivery = p.delivery ? `<span style="color:#888;font-size:10px;">📅 ${App.escapeHtml(p.delivery)}</span>` : '';
-          html += `<div style="padding:2px 0;${i > 0 ? 'border-top:1px dotted #eee;' : ''}">${brand}${model} ${qty} ${delivery}</div>`;
-        });
-        html += '</div>';
-        return html;
-      }
-
-      // 旧格式：纯文本
-      return `<span style="font-size:12px;color:#555;word-break:break-all;">${App.escapeHtml(productModel)}</span>`;
-    }
-
-    // ========== 订单操作 ==========
-    async function updateStatus(orderId, status) {
-      const { error } = await API.updateOrder(orderId, { order_status: status });
-      if (error) {
-        showToast('更新状态失败: ' + error.message, 'error');
-      } else {
-        showToast('状态 → ' + status, 'success');
-        await loadOrders();
-      }
-    }
-
-    async function updateWarehouseNotes(orderId, notes) {
-      const { error } = await API.updateOrder(orderId, { warehouse_notes: notes });
-      if (error) showToast('更新备注失败: ' + error.message, 'error');
-    }
-
-    async function deleteOrder(orderId) {
-      if (!confirm('确定要删除此订单吗？此操作不可恢复！')) return;
-      const { error } = await API.deleteOrder(orderId);
-      if (error) {
-        showToast('删除失败: ' + error.message, 'error');
-      } else {
-        showToast('订单已删除', 'success');
-        await loadOrders();
-      }
-    }
-
-    // ========== 工具函数 ==========
-    function setBtnLoading(btn, loading, text) {
-      btn.disabled = loading;
-      btn.textContent = text;
-    }
-
-    // ========== 超管：订单编辑弹窗 ==========
-    let _editingOrderId = null;
-    let _eprc = 0;
-
-    function openOrderEditor(oid) {
-      _editingOrderId = oid;
-      const overlay = document.getElementById('orderEditModal');
-      const body = document.getElementById('orderEditModalBody');
-      body.innerHTML = '<p style="text-align:center;color:#999;padding:30px;">加载中...</p>';
-      overlay.classList.add('show');
-
-      SUPABASE.from('orders').select('*').eq('id', oid).single().then(({ data: order }) => {
-        if (!order) { body.innerHTML = '<p style="color:red;text-align:center;">订单不存在</p>'; return; }
-        document.getElementById('editModalTitle2').textContent = '✏️ 编辑: ' + order.invoice_no;
-
-        let prods = [];
-        if (typeof order.product_model === 'string' && order.product_model.startsWith('[')) {
-          try { prods = JSON.parse(order.product_model); } catch(e) {}
-        }
-
-        body.innerHTML = `
-<form onsubmit="saveEdited(event)">
-<div class="form-row-c" style="margin-bottom:12px;">
-  <div class="form-group"><label>到款单号 *</label><input type="text" id="ei_no" value="${App.escapeHtml(order.invoice_no)}" required style="width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:6px;"></div>
-  <div class="form-group"><label>单据日期</label><input type="date" id="ei_date" value="${order.order_date || ''}" style="width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:6px;"></div>
-  <div class="form-group"><label>总数量</label><input type="number" id="ei_qty" value="${order.quantity || 0}" min="0" style="width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:6px;"></div>
-</div>
-<div class="form-row-c" style="margin-bottom:12px;">
-  <div class="form-group"><label>状态</label><select id="ei_status" style="width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:6px;"><option value="">- 待填写 -</option>${CONFIG.ORDER_STATUSES.map(s => `<option value="${s}" ${s === order.order_status ? 'selected' : ''}>${s}</option>`).join('')}</select></div>
-  <div class="form-group"><label>业务员</label><input type="text" id="ei_sp" value="${App.escapeHtml(order.salesperson_name || '')}" style="width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:6px;"></div>
-  <div class="form-group"><label>预计发货时间</label><input type="date" id="ei_ship" value="${order.shipping_date || ''}" style="width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:6px;"></div>
-</div>
-<div class="form-row-c" style="margin-bottom:12px;">
-  <div class="form-group"><label>进度回复</label><input type="text" id="ei_wnotes" value="${App.escapeHtml(order.warehouse_notes || '')}" style="width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:6px;"></div>
+<div class="header">
+<h2>📦 进度回复系统 - 管理</h2>
+<div><span id="uname"></span> · <span id="urole"></span> <button class="btn" onclick="Auth.logout()">退出</button></div>
 </div>
 
-<div style="border:1.5px solid #667eea;border-radius:10px;padding:14px;background:#fafbff;margin:10px 0;">
-  <div style="display:flex;justify-content:space-between;margin-bottom:8px;font-size:13px;font-weight:500;color:#444;">📦 产品明细 <span id="eisum" style="font-size:12px;color:#667eea;"></span></div>
-  <div style="display:flex;gap:6px;padding:6px 8px;background:#f0f4ff;border-radius:6px;font-size:11px;color:#666;"><span style="width:28px;"></span><span style="flex:1;">品牌</span><span style="flex:1.4;">型号</span><span style="width:50px;text-align:center;">数量</span><span style="flex:1;">货期</span><span style="width:24px;"></span></div>
-  <div id="epRows"></div>
-  <button type="button" onclick="addEPRow()" style="margin-top:8px;padding:5px 14px;background:#f0f4ff;color:#667eea;border:1px dashed #99aaff;border-radius:5px;font-size:12px;cursor:pointer;">+ 添加行</button>
+<div class="tabs">
+<button class="tab active" onclick="switchTab('dash')">📊 仪表盘</button>
+<button class="tab" onclick="switchTab('orders')">📋 订单新增</button>
+<button class="tab" onclick="switchTab('splist')">👥 业务员管理</button>
+<button class="tab" onclick="switchTab('users')">🔧 用户管理</button>
 </div>
 
-<div style="margin-top:16px;display:flex;gap:10px;">
-  <button type="submit" class="btn btn-primary">💾 保存全部修改</button>
-  <button type="button" class="btn btn-secondary" onclick="closeEditModal()">取消</button>
+<div id="dash" class="panel active"><div class="stats" id="stats"></div><div id="salesStats"></div></div>
+
+<div id="orders" class="panel">
+<h3>新增订单</h3>
+<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px">
+<input id="oi_no" placeholder="到款单号*" required>
+<input id="oi_date" type="date">
+<input id="oi_model" placeholder="产品型号*" required>
+<input id="oi_qty" type="number" placeholder="数量*" required value="1" style="width:80px">
+<select id="oi_sp"><option value="">选择业务员</option></select>
+<button class="btn btn-danger" onclick="addOrder()">+ 添加订单</button>
 </div>
-</form>`;
-        _eprc = 0;
-        if (prods.length) prods.forEach(p => addEPRow(p)); else addEPRow();
-        updateEISum();
-      });
-    }
+<h3>订单列表</h3>
+<table><thead><tr>
+<th>到款单号</th><th>日期</th><th>产品</th><th>数量</th><th>业务员</th><th>状态</th><th>预计发货</th><th>进度回复</th><th>操作</th>
+</tr></thead><tbody id="otbl"></tbody></table>
+</div>
 
-    function closeEditModal() {
-      document.getElementById('orderEditModal').classList.remove('show');
-      _editingOrderId = null;
-    }
+<div id="splist" class="panel">
+<h3>业务员管理</h3>
+<div style="display:flex;gap:10px;margin-bottom:12px">
+<input id="sp_name" placeholder="姓名*">
+<input id="sp_code" placeholder="识别码*">
+<button class="btn btn-danger" onclick="addSp()">+ 添加</button>
+</div>
+<table><thead><tr><th>姓名</th><th>识别码</th><th>状态</th><th>操作</th></tr></thead><tbody id="sptbl"></tbody></table>
+</div>
 
-    function addEPRow(data) {
-      _eprc++;
-      const n = _eprc;
-      const c = document.getElementById('epRows');
-      const r = document.createElement('div');
-      r.style = 'display:flex;gap:6px;align-items:center;padding:6px 8px;margin-bottom:3px;background:#fff;border-radius:4px;border:0.5px solid #e0e0e0;';
-      r.id = 'epr-' + n;
-      r.innerHTML = `<span style="font-size:11px;color:#aaa;width:28px;">#${n}</span><input type="text" placeholder="品牌" value="${App.escapeHtml(data ? data.brand || '' : '')}" style="flex:1;padding:5px 7px;font-size:12px;border:1px solid #ddd;border-radius:4px;" class="eir-b"><input type="text" placeholder="型号" value="${App.escapeHtml(data ? data.model || '' : '')}" style="flex:1.4;padding:5px 7px;font-size:12px;border:1px solid #ddd;border-radius:4px;" class="eir-m"><input type="number" placeholder="数量" value="${data ? (data.qty || '') : ''}" min="0" style="width:50px;padding:5px 4px;font-size:12px;border:1px solid #ddd;border-radius:4px;text-align:center;" class="eir-q"><input type="text" placeholder="货期" value="${App.escapeHtml(data ? data.delivery || '' : '')}" style="flex:1;padding:5px 7px;font-size:12px;border:1px solid #ddd;border-radius:4px;" class="eir-d"><button type="button" onclick="this.parentElement.remove();updateEISum();renumberEP();" style="padding:0 6px;background:none;border:none;cursor:pointer;color:#e24b4a;font-size:17px;">×</button>`;
-      c.appendChild(r);
-      r.querySelectorAll('input').forEach(i => i.addEventListener('input', updateEISum));
-      updateEISum();
-    }
+<div id="users" class="panel">
+<h3>用户管理</h3>
+<table><thead><tr><th>邮箱</th><th>角色</th><th>更改角色</th></tr></thead><tbody id="utbl"></tbody></table>
+</div>
 
-    function renumberEP() {
-      document.querySelectorAll('#epRows > div').forEach((r, i) => r.querySelector('span').textContent = '#' + (i + 1));
-    }
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="js/config.js?v=2"></script>
+<script src="js/auth.js?v=2"></script>
+<script src="js/api.js?v=2"></script>
+<script>
+if(!Auth.requireRole(['admin','super_admin'])){}
 
-    function updateEISum() {
-      let t = 0, c = 0;
-      document.querySelectorAll('#epRows .eir-q').forEach(i => {
-        const v = parseInt(i.value);
-        if (!isNaN(v) && v > 0) { t += v; c++; }
-      });
-      document.getElementById('eisum').textContent = c ? `${c}产品·总量${t}` : '';
-    }
+async function init(){
+  const u=Auth.getUser();
+  document.getElementById('uname').textContent=u.full_name||u.email;
+  document.getElementById('urole').textContent=Auth.getRoleName(u.role);
+  document.getElementById('oi_date').value=new Date().toISOString().split('T')[0];
+  await loadSpOptions();
+  await loadDash();
+  await loadOrders();
+  await loadSpList();
+  await loadUsers();
+  switchTab('dash');
+}
 
-    function collectEP() {
-      const p = []; let ok = false;
-      document.querySelectorAll('#epRows > div').forEach(r => {
-        const b = r.querySelector('.eir-b').value.trim(), m = r.querySelector('.eir-m').value.trim(),
-              qv = r.querySelector('.eir-q').value.trim(), d = r.querySelector('.eir-d').value.trim(), q = qv ? parseInt(qv) : 0;
-        if (m || b) { p.push({ brand: b, model: m, qty: Math.max(0, q), delivery: d }); if (m) ok = true; }
-      });
-      return { products: p, ok };
-    }
+function switchTab(t){
+  document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('active',b.textContent.includes(
+    {dash:'仪表盘',orders:'订单',splist:'业务员',users:'用户'}[t])));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById(t).classList.add('active');
+  if(t==='dash') loadDash();
+  if(t==='orders') {loadSpOptions();loadOrders();}
+  if(t==='splist') loadSpList();
+  if(t==='users') loadUsers();
+}
 
-    async function saveEdited(e) {
-      e.preventDefault();
-      if (!_editingOrderId) return;
-      const { products, ok } = collectEP();
-      const payload = {
-        invoice_no: document.getElementById('ei_no').value.trim(),
-        order_date: document.getElementById('ei_date').value || null,
-        quantity: parseInt(document.getElementById('ei_qty').value) || 0,
-        order_status: document.getElementById('ei_status').value || null,
-        salesperson_name: document.getElementById('ei_sp').value.trim(),
-        shipping_date: document.getElementById('ei_ship').value || null,
-        warehouse_notes: document.getElementById('ei_wnotes').value.trim(),
-        product_model: JSON.stringify(products)
-      };
-      if (!payload.invoice_no || !ok) { showToast('到款单号和至少一个型号必填', 'error'); return; }
-      const btn = e.target.querySelector('button[type="submit"]');
-      setBtnLoading(btn, true, '保存中...');
-      const { error } = await API.updateOrder(_editingOrderId, payload);
-      setBtnLoading(btn, false, '💾 保存全部修改');
-      if (error) { showToast('保存失败: ' + error.message, 'error'); }
-      else { showToast('✅ 订单已更新！', 'success'); closeEditModal(); await loadOrders(); }
-    }
+async function loadSpOptions(){
+  const sps=await API.getSalespeople();
+  const sel=document.getElementById('oi_sp');
+  sel.innerHTML='<option value="">选择业务员</option>';
+  sps.forEach(s=>{sel.innerHTML+=`<option value="${esc(s.name)}">${esc(s.name)}</option>`});
+}
 
-    
+async function loadDash(){
+  const s=await API.getOrderStats();
+  document.getElementById('stats').innerHTML=`
+    <div class="stat"><div class="num">${s.total}</div><div class="lbl">总订单</div></div>
+    ${CONFIG.ORDER_STATUSES.map(st=>`<div class="stat"><div class="num">${s.by_status[st]||0}</div><div class="lbl">${st}</div></div>`).join('')}
+    <div class="stat"><div class="num">${s.by_sales.length}</div><div class="lbl">业务员数</div></div>`;
+  let h='<h4>业务员订单统计</h4><table><tr><th>业务员</th><th>订单数</th></tr>';
+  s.by_sales.forEach(x=>{h+=`<tr><td>${esc(x.name)}</td><td>${x.count}</td></tr>`});
+  h+='</table>';
+  document.getElementById('salesStats').innerHTML=s.by_sales.length?h:'';
+}
 
-    `;
-      document.getElementById('admMsgInput').value = '';
-      document.getElementById('admMsgOverlay').classList.add('show');
-    }
+async function loadOrders(){
+  const {data}=await API.getOrders();
+  const tb=document.getElementById('otbl');
+  if(!data||!data.length){tb.innerHTML='<tr><td colspan="9" style="text-align:center;color:#ccc">暂无</td></tr>';return;}
+  let h='';
+  data.forEach(o=>{
+    h+=`<tr>
+      <td><strong>${esc(o.invoice_no)}</strong></td><td>${o.order_date||'-'}</td><td>${esc(o.product_model||'')}</td>
+      <td>${o.quantity}</td><td>${esc(o.salesperson_name||'')}</td><td>${o.order_status||'-'}</td>
+      <td>${o.shipping_date||'-'}</td><td>${esc(o.warehouse_notes||'').substring(0,15)}</td>
+      <td><button class="btn" onclick="delOrder(${o.id})">🗑</button></td></tr>`;
+  });
+  tb.innerHTML=h;
+}
 
-    
+async function addOrder(){
+  const r=await API.createOrder({
+    invoice_no:document.getElementById('oi_no').value.trim(),
+    order_date:document.getElementById('oi_date').value||null,
+    product_model:document.getElementById('oi_model').value.trim(),
+    quantity:parseInt(document.getElementById('oi_qty').value)||0,
+    salesperson_name:document.getElementById('oi_sp').value
+  });
+  if(r.error)alert('添加失败:'+r.error.message);else{loadOrders();loadDash();}
+}
 
-    
-      let html = '';
-        const timeStr = new Date(m.created_at).toLocaleString('zh-CN', { month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' });
-      });
-      body.innerHTML = html;
-    }
+async function delOrder(id){if(confirm('确定删除？')){await API.deleteOrder(id);loadOrders();loadDash();}}
 
-    
-      input.value = '';
-      const user = Auth.getUser();
-      const myRole = Auth.isSuper() ? 'super_admin' : 'admin';
-        content: content
-      });
-      if (error) { showToast('发送失败: ' + error.message, 'error'); input.value = content; return; }
-      showToast('✅ 已发送', 'success');
-      setTimeout(() => { document.getElementById('admMsgBody').scrollTop = document.getElementById('admMsgBody').scrollHeight; }, 50);
-    }
+async function loadSpList(){
+  const sps=await API.getSalespeople();
+  const tb=document.getElementById('sptbl');
+  let h='';
+  sps.forEach(s=>{
+    h+=`<tr>
+      <td><input value="${esc(s.name)}" onblur="updSp(${s.id},'name',this.value)" style="width:100px"></td>
+      <td><input value="${esc(s.access_code||'')}" onblur="updSp(${s.id},'access_code',this.value.toUpperCase())" style="width:100px"></td>
+      <td>${s.is_active?'✅启用':'❌停用'}</td>
+      <td><button class="btn" onclick="togSp(${s.id},${!s.is_active})">${s.is_active?'停用':'启用'}</button> <button class="btn btn-danger" onclick="delSp(${s.id})">🗑</button></td></tr>`;
+  });
+  tb.innerHTML=h||'<tr><td colspan="4">暂无业务员</td></tr>';
+}
 
-    
-    });
-  </script>
+async function addSp(){
+  const n=document.getElementById('sp_name').value.trim();
+  const c=document.getElementById('sp_code').value.trim().toUpperCase();
+  if(!n||!c)return alert('姓名和识别码必填');
+  await API.addSalesperson(n,c);
+  loadSpList();loadSpOptions();
+}
 
-  <!-- 超管编辑弹窗 -->
-  <div class="modal-overlay" id="orderEditModal" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:9999;opacity:0;pointer-events:none;transition:opacity .25s;">
-    <div style="background:#fff;border-radius:14px;width:95%;max-width:800px;max-height:85vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.25);transform:translateY(20px);transition:transform .25s;" id="orderEditBox">
-      <div style="padding:18px 22px;display:flex;justify-content:space-between;align-items:center;background:linear-gradient(135deg,#667eea,#764ba2);border-radius:14px 14px 0 0;">
-        <h3 id="editModalTitle2" style="margin:0;color:#fff;font-size:16px;">编辑订单</h3>
-        <button onclick="closeEditModal()" style="background:none;border:none;color:rgba(255,255,255,0.8);font-size:22px;cursor:pointer;">&times;</button>
-      </div>
-      <div id="orderEditModalBody" style="padding:22px;"></div>
-    </div>
-  </div>
-  <!-- 留言面板 -->
-        <textarea id="admMsgInput" placeholder="留言..." rows="2"></textarea>
-      </div>
-    </div>
-  </div>
+async function updSp(id,f,v){const u={};u[f]=v;await API.updateSalesperson(id,u);}
+async function togSp(id,active){await API.updateSalesperson(id,{is_active:active});loadSpList();}
+async function delSp(id){if(confirm('确定删除？')){await API.updateSalesperson(id,{is_active:false});loadSpList();}}
+
+async function loadUsers(){
+  const users=await API.getUsers();
+  const roles=['admin','warehouse','sales','super_admin'];
+  let h='';
+  users.forEach(u=>{
+    h+=`<tr><td>${esc(u.email)}</td><td>${Auth.getRoleName(u.role)}</td>
+      <td><select onchange="updUser('${u.id}',this.value)">${roles.map(r=>`<option value="${r}" ${r===u.role?'selected':''}>${Auth.getRoleName(r)}</option>`).join('')}</select></td></tr>`;
+  });
+  document.getElementById('utbl').innerHTML=h;
+}
+
+async function updUser(id,role){await API.updateUserRole(id,role);loadUsers();}
+
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+init();
+</script>
 </body>
 </html>
