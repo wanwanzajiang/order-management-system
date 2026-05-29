@@ -68,7 +68,8 @@ const FileOps = {
     if (!body) return;
 
     const { data: files } = await API.getOrderFiles(orderId);
-    const isUploader = ['warehouse', 'admin', 'super_admin'].includes(userRole);
+    const role = userRole || (Auth.getUser()?.role) || 'sales';
+    const isUploader = ['warehouse', 'admin', 'super_admin'].includes(role);
 
     let html = '';
 
