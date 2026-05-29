@@ -266,5 +266,38 @@ const API = {
       by_status: statusCounts,
       by_sales: salesOrders
     };
-  }
+  },
+
+  // ========== 文件 ==========
+  async getUserProfile() {
+    const user = Auth.getUser();
+    const { data } = await SUPABASE.from('user_profiles').select('role').eq('id', user.id).single();
+    return { data: { role: data?.role || 'sales' } };
+  },
+
+  async getOrderFiles(orderId) {
+    const { data: order } = await SUPABASE.from('orders').select('file_ids').eq('id', orderId).single();
+    return { data: Array.isArray(order?.file_ids) ? order.file_ids : [] };
+  },
+
+  async attachFileToOrder(orderId, meta) {
+    const { data: order } = await SUPABASE.from('orders').select('file_ids').eq('id', orderId).single();
+    const files = Array.isArray(order?.file_ids) ? [...order.file_ids] : [];
+    files.push({ ...meta, uploaded_at: new Date().toISOString() });
+    return await SUPABASE.from('orders').update({ file_ids: files }).eq('id', orderId);
+  },
+
+  async replaceFile(orderId, oldFileId, meta) {
+    const { data: order } = await SUPABASE.from('orders').select('file_ids').eq('id', orderId).single();
+    let files = Array.isArray(order?.file_ids) ? order.file_ids : [];
+    files = files.filter(f => (typeof f === 'string' ? f : f.id) !== oldFileId);
+    files.push({ ...meta, uploaded_at: new Date().toISOString() });
+    return await SUPABASE.from('orders').update({ file_ids: files }).eq('id', orderId);
+  },
+
+  async removeFileFromOrder(orderId, fileId) {
+    const { data: order } = await SUPABASE.from('orders').select('file_ids').eq('id', orderId).single();
+    const files = Array.isArray(order?.file_ids) ? order.file_ids.filter(f => (typeof f === 'string' ? f : f.id) !== fileId) : [];
+    return await SUPABASE.from('orders').update({ file_ids: files }).eq('id', orderId);
+  },
 };

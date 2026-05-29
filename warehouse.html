@@ -88,6 +88,12 @@
     </div>
   </main>
 
+  <!-- 文件面板 -->
+  <div class="file-overlay" id="filePanelOverlay" onclick="if(event.target===this)FileOps.close()">
+    <div class="file-panel"><div class="file-header"><h3 id="filePanelTitle">📎 文件</h3><button onclick="FileOps.close()">&times;</button></div>
+    <div id="filePanelBody"></div></div>
+  </div>
+
   <footer class="footer">
     © <span id="footerYear"></span> 进度回复系统
   </footer>
@@ -97,6 +103,8 @@
   <script src="js/auth.js?v=1780048640"></script>
   <script src="js/api.js?v=1780048640"></script>
   <script src="js/app.js?v=1780048640"></script>
+  <script src="js/file-ops.js"></script>
+  <link rel="stylesheet" href="css/file-panel.css">
   <!-- 留言面板 -->
   <div class="msg-overlay" id="whMsgOverlay" onclick="if(event.target===this)closeWhMsgPanel()">
     <div class="msg-panel">
@@ -211,6 +219,7 @@
 
         groups[status].forEach(order => {
           const productsHtml = renderWarehouseProductDetail(order.product_model);
+          const fileBtn = FileOps.renderFileBtn(order, _currentRole);
 
           html += `<tr data-id="${order.id}">
             <td><strong>${App.escapeHtml(order.invoice_no)}</strong></td>
@@ -234,6 +243,7 @@
             <td>${order.photo_request ? '📸' : '-'}</td>
             <td>${order.bring_goods === true ? '✅' : order.bring_goods === false ? '❌' : '-'}</td>
             <td style="display:flex;gap:4px;flex-wrap:wrap;">
+              ${fileBtn}
               <select class="form-control status-select" onchange="updateStatus(${order.id}, this.value)" style="width:80px;">
                 <option value="">- 待填写 -</option>
                 ${CONFIG.ORDER_STATUSES.map(s =>
