@@ -1,136 +1,382 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>进度回复 - 仓库</title>
-<link rel="stylesheet" href="css/style.css">
-<style>
-body{font-family:sans-serif;background:#f5f3ee;margin:0}
-.header{background:#fff;padding:12px 24px;display:flex;justify-content:space-between;align-items:center;box-shadow:0 1px 4px rgba(0,0,0,.08)}
-.header h1{font-size:18px;margin:0}
-.container{max-width:1100px;margin:20px auto;padding:0 20px}
-table{width:100%;border-collapse:collapse;background:#fff;border-radius:12px;overflow:hidden}
-th,td{padding:10px 12px;text-align:left;border-bottom:1px solid #eee;font-size:13px}
-th{background:#f8f7f2;font-weight:500;color:#555}
-input,select{padding:6px 10px;border:1px solid #ddd;border-radius:6px;font-size:13px}
-.notes-input{width:100%;min-width:100px}
-.filter{display:flex;gap:8px;align-items:center;margin-bottom:16px;flex-wrap:wrap}
-.card{background:#fff;border-radius:12px;padding:20px}
-.loading{text-align:center;padding:40px;color:#999}
-.empty{text-align:center;padding:40px;color:#bbb}
-.toast{position:fixed;top:20px;right:20px;padding:10px 20px;border-radius:8px;color:#fff;z-index:9999;opacity:0;transition:opacity .3s}
-.toast.show{opacity:1}
-.toast-success{background:#27ae60}
-.toast-error{background:#e24b4a}
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>订单管理 - 仓库</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    /* 留言面板 */
+    .msg-overlay {
+      position:fixed;top:0;left:0;right:0;bottom:0;
+      background:rgba(0,0,0,0.45);z-index:10000;
+      display:flex;align-items:center;justify-content:center;
+      opacity:0;pointer-events:none;transition:opacity .25s;
+    }
+    .msg-overlay.show { opacity:1;pointer-events:auto; }
+    .msg-panel {
+      background:#fff;border-radius:16px;width:92%;max-width:520px;max-height:80vh;display:flex;flex-direction:column;
+      box-shadow:0 20px 60px rgba(0,0,0,0.25);transform:translateY(20px);transition:transform .25s;
+    }
+    .msg-overlay.show .msg-panel { transform:translateY(0); }
+    .msg-header { padding:16px 20px;background:linear-gradient(135deg,#e67e22,#d35400);border-radius:16px 16px 0 0;display:flex;justify-content:space-between;align-items:center; }
+    .msg-header h3 { margin:0;color:#fff;font-size:15px; }
+    .msg-close { background:none;border:none;color:rgba(255,255,255,0.8);font-size:22px;cursor:pointer;line-height:1; }
+    .msg-body { flex:1;overflow-y:auto;padding:16px 20px; }
+    .msg-bubble { max-width:82%;padding:10px 14px;border-radius:12px;margin-bottom:10px;font-size:13px;line-height:1.5; }
+    .msg-from-sales { background:#eef1ff;color:#334;border-top-left-radius:4px;align-self:flex-start; }
+    .msg-self { background:linear-gradient(135deg,#e67e22,#d35400);color:#fff;border-top-right-radius:4px;align-self:flex-end;margin-left:auto; }
+    .msg-meta { font-size:10px;color:#999;margin-top:3px; }
+    .msg-input-area { padding:14px 20px;border-top:1px solid #eee;display:flex;gap:8px;align-items:flex-end; }
+    .msg-input-area textarea {
+      flex:1;border:1.5px solid #ddd;border-radius:10px;padding:10px 12px;font-size:13px;resize:none;height:48px;font-family:inherit;outline:none;transition:border-color .2s;
+    }
+    .msg-input-area textarea:focus { border-color:#e67e22; box-shadow:0 0 0 3px rgba(230,126,34,0.12); }
+    .msg-send-btn {
+      padding:10px 18px;background:linear-gradient(135deg,#e67e22,#d35400);color:#fff;border:none;border-radius:10px;font-size:13px;cursor:pointer;font-weight:500;white-space:nowrap;
+    }
+    .msg-send-btn:hover { opacity:.9; }
+    .msg-empty { text-align:center;color:#bbb;padding:30px;font-size:13px; }
+    .msg-unread-dot { width:8px;height:8px;background:#e07a5f;border-radius:50%;display:inline-block;margin-right:4px;animation:pulse 1.5s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+    .unread-badge { display:inline-flex;align-items:center;background:#e07a5f;color:#fff;font-size:11px;padding:2px 8px;border-radius:10px;font-weight:500;margin-left:6px;animation:pulse 1.5s infinite; cursor:pointer; }
+  </style>
 </head>
 <body>
-<div class="header">
-<h1>📦 进度回复系统 - 仓库</h1>
-<div style="display:flex;align-items:center;gap:12px">
-<span id="userName">-</span>
-<span style="background:#e07a5f;color:#fff;padding:2px 10px;border-radius:12px;font-size:12px" id="userRole">-</span>
-<a href="#" onclick="Auth.logout()" style="font-size:12px;color:#999">退出</a>
-</div>
-</div>
+  <header class="header">
+    <div class="container">
+      <h1>📦 订单管理系统 - 仓库</h1>
+      <div class="header-info">
+        <div class="user-info">
+          <span id="userName">仓库人员</span>
+          <span class="role-badge" id="userRole">仓库</span>
+        </div>
+        <button class="btn btn-secondary btn-sm" onclick="Auth.logout()">退出登录</button>
+      </div>
+    </div>
+  </header>
 
-<div class="container">
-<div class="card">
-<h3>📋 订单操作台</h3>
-<div class="filter">
-<label>状态：</label>
-<select id="filterStatus" onchange="loadOrders()">
-<option value="">全部</option>
-<option>调货中</option><option>路途中</option><option>已到货</option><option>已完结</option>
-</select>
-<label>业务员：</label>
-<select id="filterSp" onchange="loadOrders()"><option value="">全部</option></select>
-</div>
-<div id="ordersList"></div>
-</div>
-</div>
+  <main class="container">
+    <div class="card">
+      <h3 class="card-title">📋 全部订单 · 仓库操作台</h3>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="js/config.js"></script>
-<script src="js/auth.js"></script>
-<script src="js/api.js"></script>
-<script>
-document.addEventListener('DOMContentLoaded', () => {
-  if (!Auth.requireRole(['warehouse','admin','super_admin'])) return;
-  init();
-});
+      <!-- 筛选栏 -->
+      <div class="filter-bar">
+        <label style="font-weight:500;color:#555;">状态筛选：</label>
+        <select id="filterStatus" class="form-control" style="width:auto;min-width:140px;" onchange="loadOrders()">
+          <option value="">全部状态</option>
+          <option value="调货中" selected>调货中（优先处理）</option>
+          <option value="路途中">路途中</option>
+          <option value="已到货">已到货</option>
+          <option value="已完结">已完结</option>
+        </select>
+        <label style="font-weight:500;color:#555;margin-left:12px;">业务员：</label>
+        <select id="filterSp" class="form-control" style="width:auto;min-width:120px;" onchange="loadOrders()">
+          <option value="">全部</option>
+        </select>
+        <button class="btn btn-secondary btn-sm" onclick="loadOrders()" style="margin-left:auto;">🔄 刷新</button>
+      </div>
 
-async function init() {
-  const user = Auth.getUser();
-  document.getElementById('userName').textContent = user.full_name || user.email;
-  document.getElementById('userRole').textContent = user.role === 'warehouse' ? '仓库人员' : '管理员';
-  await loadSpFilter();
-  await loadOrders();
-}
+      <p style="font-size:13px;color:#888;margin-bottom:12px;">
+        💡 你的权限：更新订单状态、填写<span style="color:#e07a5f;font-weight:600;">发货时间</span>和<span style="color:#e07a5f;font-weight:600;">快递单号</span>、添加仓库备注
+      </p>
 
-async function loadSpFilter() {
-  const { data } = await API.getSalespeople();
-  const sel = document.getElementById('filterSp');
-  (data||[]).forEach(s => {
-    sel.innerHTML += `<option value="${s.name}">${s.name}</option>`;
-  });
-}
+      <div id="ordersContainer">
+        <div class="loading">加载中...</div>
+      </div>
+    </div>
+  </main>
 
-async function loadOrders() {
-  const container = document.getElementById('ordersList');
-  container.innerHTML = '<div class="loading">加载中...</div>';
-  const status = document.getElementById('filterStatus').value;
-  const sp = document.getElementById('filterSp').value;
-  const { data, error } = await API.getOrders({ status, sp });
-  if (error) { container.innerHTML = '<div class="empty">加载失败: ' + error.message + '</div>'; return; }
-  if (!data || data.length === 0) { container.innerHTML = '<div class="empty">暂无订单</div>'; return; }
+  <footer class="footer">
+    © <span id="footerYear"></span> 订单管理系统
+  </footer>
 
-  const statusIcon = { '调货中': '📦', '路途中': '🚚', '已到货': '✅', '已完结': '🏁' };
-  const groups = {};
-  data.forEach(o => { const s = o.order_status || '(空)'; if (!groups[s]) groups[s] = []; groups[s].push(o); });
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/config.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/app.js"></script>
+  <!-- 留言面板 -->
+  <div class="msg-overlay" id="whMsgOverlay" onclick="if(event.target===this)closeWhMsgPanel()">
+    <div class="msg-panel">
+      <div class="msg-header"><h3 id="whMsgTitle">💬 订单留言</h3><button class="msg-close" onclick="closeWhMsgPanel()">&times;</button></div>
+      <div class="msg-body" id="whMsgBody"><p class="msg-empty">加载中...</p></div>
+      <div class="msg-input-area">
+        <textarea id="whMsgInput" placeholder="回复留言..." rows="2"></textarea>
+        <button class="msg-send-btn" onclick="sendWhMessage()">回复</button>
+      </div>
+    </div>
+  </div>
 
-  let html = '';
-  for (const status of CONFIG.ORDER_STATUSES) {
-    if (!groups[status] || groups[status].length === 0) continue;
-    html += `<h4 style="margin:16px 0 8px">${statusIcon[status]} ${status} (${groups[status].length})</h4>
-    <table><thead><tr>
-      <th>到款单号</th><th>日期</th><th>产品</th><th>数量</th><th>业务员</th>
-      <th>预计发货</th><th>进度回复</th><th>状态</th>
-    </tr></thead><tbody>`;
+  <script>
+    document.getElementById('footerYear').textContent = new Date().getFullYear();
 
-    groups[status].forEach(o => {
-      html += `<tr>
-        <td><strong>${o.invoice_no}</strong></td>
-        <td>${o.order_date || '-'}</td>
-        <td style="max-width:200px;font-size:12px">${o.product_model || '-'}</td>
-        <td>${o.quantity || '-'}</td>
-        <td>${o.salesperson_name || '-'}</td>
-        <td><input type="date" value="${o.shipping_date || ''}" onchange="updateField(${o.id},'shipping_date',this.value)" style="width:130px"></td>
-        <td><input type="text" class="notes-input" value="${o.warehouse_notes || ''}" onblur="updateField(${o.id},'warehouse_notes',this.value)" placeholder="进度回复" style="width:160px"></td>
-        <td><select onchange="updateField(${o.id},'order_status',this.value)" style="width:90px">
-          <option value="">-</option>
-          ${CONFIG.ORDER_STATUSES.map(s => `<option value="${s}" ${s===o.order_status?'selected':''}>${s}</option>`).join('')}
-        </select></td>
-      </tr>`;
+    if (!Auth.requireRole([CONFIG.ROLES.WAREHOUSE, CONFIG.ROLES.ADMIN])) {
+      // 已重定向
+    } else {
+      init();
+    }
+
+    async function init() {
+      const user = Auth.getUser();
+      document.getElementById('userName').textContent = user.full_name || user.email;
+      document.getElementById('userRole').textContent = App.getRoleName(user.role);
+      await loadSalespeopleFilter();
+      await loadOrders(); // 默认显示"调货中"
+    }
+
+    async function loadSalespeopleFilter() {
+      const { data } = await API.getSalespeople();
+      const sel = document.getElementById('filterSp');
+      if (data && data.length > 0) {
+        data.forEach(sp => {
+          sel.innerHTML += `<option value="${App.escapeHtml(sp.name)}">${App.escapeHtml(sp.name)}</option>`;
+        });
+      }
+    }
+
+    let whDateSortAsc = false;
+
+    function toggleDateSort() {
+      whDateSortAsc = !whDateSortAsc;
+      const icon = document.getElementById('whDateSortIcon');
+      if (icon) icon.textContent = whDateSortAsc ? '↑ 升序' : '↓ 降序';
+      loadOrders();
+    }
+
+    async function loadOrders() {
+      const container = document.getElementById('ordersContainer');
+      App.showLoading(container);
+
+      let query = SUPABASE
+        .from('orders')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      const statusFilter = document.getElementById('filterStatus').value;
+      const spFilter = document.getElementById('filterSp').value;
+      if (statusFilter) query = query.eq('order_status', statusFilter);
+      if (spFilter) query = query.eq('salesperson_name', spFilter);
+
+      const { data, error } = await query;
+
+      if (error) {
+        App.showError(container, '加载订单失败: ' + error.message);
+        return;
+      }
+      if (!data || data.length === 0) {
+        App.showEmpty(container, '暂无订单数据');
+        return;
+      }
+
+      // 获取未读留言数
+      const oids = data.map(o => o.id);
+      const unreadCounts = await API.getUnreadCounts(oids);
+
+      renderOrders(data, unreadCounts);
+    }
+
+    function renderOrders(orders, unreadCounts) {
+      const container = document.getElementById('ordersContainer');
+
+      orders.sort((a, b) => {
+        const da = a.order_date || '', db = b.order_date || '';
+        return whDateSortAsc ? da.localeCompare(db) : db.localeCompare(da);
+      });
+
+      const groups = {};
+      orders.forEach(o => { const s = o.order_status; if (!groups[s]) groups[s] = []; groups[s].push(o); });
+
+      const statusIcon = { '调货中': '📦', '路途中': '🚚', '已到货': '✅', '已完结': '🏁' };
+
+      let html = '';
+      for (const status of CONFIG.ORDER_STATUSES) {
+        if (!groups[status] || groups[status].length === 0) continue;
+
+        html += `<div class="card" style="margin-bottom:16px;border-left:4px solid ${
+          status === '调货中' ? '#e67e22' : status === '路途中' ? '#3498db' : status === '已到货' ? '#27ae60' : '#95a5a6'
+        };padding:16px;">
+          <h4 style="margin:0 0 12px 0;">${statusIcon[status]} ${status} (${groups[status].length})</h4>
+          <div class="table-wrapper" style="overflow-x:auto;">
+            <table>
+              <thead>
+                <tr>
+                  <th>发票号</th><th style="cursor:pointer;user-select:none;white-space:nowrap;" onclick="toggleDateSort()">单据日期 <span id="whDateSortIcon" style="font-size:11px;color:#999;">↓ 降序</span></th><th style="min-width:200px;">产品明细</th>
+                  <th>总数量</th><th>业务员</th>
+                  <th style="color:#e07a5f;font-weight:600;">📅 发货时间</th>
+                  <th style="color:#e07a5f;font-weight:600;">📦 快递单号</th>
+                  <th>仓库备注</th><th style="min-width:70px;">操作</th>
+                </tr>
+              </thead>
+              <tbody>`;
+
+        groups[status].forEach(order => {
+          const productsHtml = renderWarehouseProductDetail(order.product_model);
+          const uc = (unreadCounts && unreadCounts[order.id]) || 0;
+          const unreadBadge = uc ? `<span class="unread-badge" onclick="openWhMsgPanel(${order.id},'${App.escapeHtml(order.invoice_no)}')">💬 ${uc}条新留言</span>` : '';
+
+          html += `<tr data-id="${order.id}">
+            <td><strong>${App.escapeHtml(order.invoice_no)}</strong>${unreadBadge}</td>
+            <td>${order.order_date || '-'}</td>
+            <td style="max-width:260px;font-size:11px;">${productsHtml}</td>
+            <td><strong>${order.quantity || '-'}</strong></td>
+            <td>${App.escapeHtml(order.salesperson_name || '-')}</td>
+            <td>
+              <input type="date" class="form-control ship-date"
+                value="${order.shipping_date || ''}"
+                onchange="updateShipping(${order.id}, this.value)"
+                style="width:150px;padding:4px 6px;font-size:13px;"
+                title="由仓库填写实际发货时间">
+            </td>
+            <td>
+              <input type="text" class="form-control tracking-input"
+                value="${App.escapeHtml('' || '')}"
+                onblur="updateTracking(${order.id}, this.value)"
+                placeholder="填写快递单号"
+                style="width:150px;padding:4px 6px;font-size:13px;"
+                title="由仓库填写快递/物流单号">
+            </td>
+            <td>
+              <input type="text" class="notes-input warehouse-notes"
+                value="${App.escapeHtml(order.warehouse_notes || '')}"
+                onblur="updateWarehouseNotes(${order.id}, this.value)" placeholder="仓库备注">
+            </td>
+            <td style="display:flex;gap:4px;flex-wrap:wrap;">
+              <button class="btn btn-sm" onclick="openWhMsgPanel(${order.id},'${App.escapeHtml(order.invoice_no)}')" style="font-size:11px;padding:3px 8px;background:#fdfbf7;color:#e07a5f;border:1px solid #f0d9cb;">💬留言</button>
+              <select class="form-control status-select" onchange="updateStatus(${order.id}, this.value)" style="width:80px;">
+                <option value="">- 待填写 -</option>
+                ${CONFIG.ORDER_STATUSES.map(s =>
+                  `<option value="${s}" ${s === order.order_status ? 'selected' : ''}>${s}</option>`
+                ).join('')}
+              </select>
+            </td>
+          </tr>`;
+        });
+
+        html += '</tbody></table></div></div>';
+      }
+
+      container.innerHTML = html || '<p style="text-align:center;color:#999;padding:30px;">暂无匹配的订单</p>';
+    }
+
+    // ========== 仓库产品明细渲染 ==========
+    function renderWarehouseProductDetail(productModel) {
+      if (!productModel) return '<span style="color:#ccc;">-</span>';
+
+      let products = null;
+      if (typeof productModel === 'string' && productModel.startsWith('[')) {
+        try { products = JSON.parse(productModel); } catch(e) {}
+      }
+
+      if (products && Array.isArray(products) && products.length > 0) {
+        let html = '<div>';
+        products.forEach((p, i) => {
+          const brand = p.brand ? `<span style="background:#e8f0fe;color:#1a56db;padding:1px 5px;border-radius:3px;margin-right:3px;font-size:10px;">${App.escapeHtml(p.brand)}</span>` : '';
+          const model = `<strong>${App.escapeHtml(p.model || '-')}</strong>`;
+          const qty = p.qty ? `<span style="color:#e67e22;">×${p.qty}</span>` : '';
+          const delivery = p.delivery ? `<span style="color:#888;font-size:10px;margin-left:4px;">📅${p.delivery}</span>` : '';
+          html += `<div style="padding:2px 0;${i>0?'border-top:1px dotted #eee':''}">${brand}${model} ${qty}${delivery}</div>`;
+        });
+        html += '</div>';
+        return html;
+      }
+
+      return `<span style="font-size:12px;color:#555;word-break:break-all;">${App.escapeHtml(productModel)}</span>`;
+    }
+
+    // ========== 仓库专属操作 ==========
+
+    async function updateStatus(id, status) {
+      showToast('更新中...', '');
+      const { error } = await API.updateOrder(id, { order_status: status });
+      if (error) {
+        showToast('更新失败: ' + error.message, 'error');
+      } else {
+        showToast(`✅ 状态 → ${status}`, 'success');
+        setTimeout(() => loadOrders(), 500);
+      }
+    }
+
+    async function updateShipping(id, dateVal) {
+      const { error } = await API.updateOrder(id, { shipping_date: dateVal || null });
+      if (error) showToast('保存发货时间失败: ' + error.message, 'error');
+      else console.log('[Warehouse] 发货时间已更新:', dateVal);
+    }
+
+     = await API.updateOrder(id, { tracking_no: noVal.trim() || null });
+      if (error) showToast('保存单号失败: ' + error.message, 'error');
+      else console.log('[Warehouse] 快递单号已更新:', noVal);
+    }
+
+    async function updateWarehouseNotes(id, notes) {
+      const { error } = await API.updateOrder(id, { warehouse_notes: notes });
+      if (error) showToast('备注保存失败: ' + error.message, 'error');
+    }
+
+    // ========== 留言系统 ==========
+    let _whMsgOrderId = null;
+
+    async function openWhMsgPanel(orderId, invoiceNo) {
+      _whMsgOrderId = orderId;
+      document.getElementById('whMsgTitle').textContent = `💬 留言 - ${invoiceNo}`;
+      document.getElementById('whMsgBody').innerHTML = '<p class="msg-empty">加载中...</p>';
+      document.getElementById('whMsgInput').value = '';
+      document.getElementById('whMsgOverlay').classList.add('show');
+
+      const { data: msgs } = await API.getMessages(orderId);
+      renderWhMessages(msgs || []);
+      // 标记业务员留言为已读
+      await API.markMessagesRead(orderId, 'sales');
+    }
+
+    function closeWhMsgPanel() {
+      document.getElementById('whMsgOverlay').classList.remove('show');
+      _whMsgOrderId = null;
+      loadOrders();
+    }
+
+    function renderWhMessages(msgs) {
+      const body = document.getElementById('whMsgBody');
+      if (!msgs || msgs.length === 0) { body.innerHTML = '<p class="msg-empty">暂无留言 💬</p>'; return; }
+      let html = '';
+      msgs.forEach(m => {
+        const isSelf = m.author_role === 'warehouse';
+        const timeStr = new Date(m.created_at).toLocaleString('zh-CN', { month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' });
+        const roleLabel = isSelf ? '我' : ('👤 ' + (m.author_name || m.author_role));
+        const cls = isSelf ? 'msg-self' : 'msg-from-sales';
+        const unreadDot = (!m.is_read && !isSelf) ? ' <span class="msg-unread-dot"></span>' : '';
+        html += `<div class="msg-bubble ${cls}"><div>${App.escapeHtml(m.content).replace(/\n/g,'<br>')}${unreadDot}</div><div class="msg-meta">${roleLabel} · ${timeStr}</div></div>`;
+      });
+      body.innerHTML = html;
+    }
+
+    async function sendWhMessage() {
+      const input = document.getElementById('whMsgInput');
+      const content = input.value.trim();
+      if (!content) { showToast('请输入回复内容', 'error'); return; }
+      if (!_whMsgOrderId) return;
+
+      input.value = '';
+      const user = Auth.getUser();
+      const { error } = await API.addMessage({
+        order_id: _whMsgOrderId,
+        author_role: 'warehouse',
+        author_name: user.full_name || user.email,
+        content: content
+      });
+      if (error) { showToast('发送失败: ' + error.message, 'error'); input.value = content; return; }
+      showToast('✅ 已回复', 'success');
+      const { data: msgs } = await API.getMessages(_whMsgOrderId);
+      renderWhMessages(msgs || []);
+      setTimeout(() => { document.getElementById('whMsgBody').scrollTop = document.getElementById('whMsgBody').scrollHeight; }, 50);
+    }
+
+    // 回车发送
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Enter' && !e.shiftKey && document.getElementById('whMsgOverlay').classList.contains('show')) {
+        sendWhMessage();
+      }
     });
-    html += '</tbody></table>';
-  }
-  container.innerHTML = html;
-}
-
-async function updateField(id, field, value) {
-  const upd = {};
-  upd[field] = value || null;
-  await API.updateOrder(id, upd);
-}
-
-function toast(msg, type) {
-  const el = document.createElement('div');
-  el.className = 'toast toast-' + (type || 'success');
-  el.textContent = msg; document.body.appendChild(el);
-  setTimeout(() => el.classList.add('show'), 10);
-  setTimeout(() => { el.classList.remove('show'); setTimeout(() => el.remove(), 300); }, 2500);
-}
-</script>
+  </script>
 </body>
 </html>

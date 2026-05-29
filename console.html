@@ -1,98 +1,469 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>控制台 - 进度回复系统</title>
-<link rel="stylesheet" href="css/style.css">
-<style>
-body{font-family:sans-serif;background:#f5f3ee;margin:0}
-.header{background:#fff;padding:12px 24px;display:flex;justify-content:space-between;align-items:center;box-shadow:0 1px 4px rgba(0,0,0,.08)}
-.header h1{font-size:18px;margin:0}
-.container{max-width:1000px;margin:20px auto;padding:0 20px}
-.stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px;margin-bottom:20px}
-.stat{background:#fff;border-radius:12px;padding:16px;text-align:center}
-.stat .num{font-size:28px;font-weight:500;color:#e07a5f}
-.stat .label{font-size:12px;color:#888;margin-top:4px}
-.card{background:#fff;border-radius:12px;padding:20px;margin-bottom:16px}
-table{width:100%;border-collapse:collapse}
-th,td{padding:8px 10px;text-align:left;border-bottom:1px solid #eee;font-size:13px}
-th{background:#f8f7f2}
-.loading{text-align:center;padding:40px;color:#999}
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>订单管理 - 控制台</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .console-nav{display:flex;gap:4px;flex-wrap wrap;padding:12px 16px;background:linear-gradient(135deg,#1a1a2e 0%,#16213e 50%,#0f3460 100%);border-radius:10px;margin-bottom:18px;align-items:center;}
+    .c-tab{padding:8px 18px;border:none;background:rgba(255,255,255,0.08);color:#aaa;cursor:pointer;border-radius:6px;font-size:13px;transition:all .2s;}
+    .c-tab.active{background:#667eea;color:#fff;font-weight:600;box-shadow:0 2px 12px rgba(102,126,234,.4);}
+    .c-tab:hover:not(.active){background:rgba(255,255,255,0.15);color:#fff;}
+    .c-card{background:#fff;border-radius:10px;padding:20px;margin-bottom:16px;box-shadow:0 1px 6px rgba(0,0,0,0.08);}
+    .c-card h3{margin:0 0 14px;font-size:15px;display:flex;align-items:center;gap:8px;}
+    .stat-grid-c{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px;margin-bottom:18px;}
+    .stat-box{background:linear-gradient(135deg,#f8f9ff,#eef1ff);border-radius:10px;padding:14px;text-align:center;border:1px solid #e0e5f0;}
+    .stat-box .num{font-size:24px;font-weight:700;color:#333;}
+    .stat-box .lbl{font-size:11px;color:#888;margin-top:2px;}
+    .user-table{width:100%;border-collapse:collapse;font-size:13px;}
+    .user-table th{background:#f5f7ff;padding:9px 10px;text-align:left;font-weight:500;color:#555;border-bottom:2px solid #ddd;}
+    .user-table td{padding:9px 10px;border-bottom:1px solid #eee;vertical-align:middle;}
+    .user-table tr:hover{background:#fafbff;}
+    .role-badge-s{display:inline-block;padding:2px 10px;border-radius:10px;font-size:11px;font-weight:500;}
+    .role-super{background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;}
+    .role-admin{background:#e8f0fe;color:#1a56db;}
+    .role-wh{background:#fef9e7;color:#b8860b;}
+    .role-sales{background:#e8f5e9;color:#2e7d32;}
+    .modal-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:9999;opacity:0;pointer-events:none;transition:opacity .25s;}
+    .modal-overlay.show{opacity:1;pointer-events:auto;}
+    .modal-box{background:#fff;border-radius:14px;width:90%;max-width:720px;max-height:85vh;overflow-y:auto;padding:0;box-shadow:0 20px 60px rgba(0,0,0,0.25);transform:translateY(20px);transition:transform .25s;}
+    .modal-overlay.show .modal-box{transform:translateY(0);}
+    .modal-head{padding:18px 22px;border-bottom:1px solid #eee;display:flex;justify-content:space-between;align-items:center;background:linear-gradient(135deg,#667eea,#764ba2);border-radius:14px 14px 0 0;}
+    .modal-head h3{margin:0;color:#fff;font-size:16px;}
+    .modal-close{background:none;border:none;color:rgba(255,255,255,0.8);font-size:22px;cursor:pointer;line-height:1;}
+    .modal-close:hover{color:#fff;}
+    .modal-body{padding:22px;}
+    .form-row-c{display:flex;gap:12px;flex-wrap:wrap;}
+    .form-group-c{flex:1;min-width:150px;margin-bottom:12px;}
+    .form-group-c label{display:block;font-size:12px;color:#555;font-weight:500;margin-bottom:4px;}
+    .btn-xs{font-size:11px;padding:3px 10px;border-radius:4px;}
+    .prod-edit-area{border:1.5px solid #667eea;border-radius:10px;padding:14px;background:#fafbff;margin:10px 0;}
+    .order-select-bar{display:flex;gap:10px;align-items:center;margin-bottom:14px;flex-wrap:wrap;}
+    .order-select-bar select{padding:7px 12px;border:1px solid #ddd;border-radius:6px;font-size:13px;}
+    .log-area{background:#1a1a2e;color:#0f0;border-radius:8px;padding:14px;font-family:monospace;font-size:12px;max-height:200px;overflow-y:auto;min-height:60px;}
+    .log-area .lw{color:#888;}
+    .log-area .ls{color:#4ade80;}
+    .log-area .le{color:#f87171;}
+    .log-area .li{color:#60a5fa;}
+    /* 超管留言区 */
+    .cmsg-area{background:#f8f9ff;border:1px dashed #c5d1e8;border-radius:8px;padding:14px;margin-top:14px;}
+    .cmsg-list{max-height:180px;overflow-y:auto;}
+    .cmsg-item{padding:7px 10px;border-radius:6px;margin-bottom:5px;font-size:12px;line-height:1.4;}
+    .cmsg-sales{background:#eef1ff;color:#334;}
+    .cmsg-wh{background:#f0f9ff;color:#224;}
+    .cmsg-admin{background:#fef3e2;color:#432;}
+    .cmsg-self{background:#667eea;color:#fff;}
+    .cmsg-meta{font-size:10px;color:#999;margin-top:2px;}
+  </style>
 </head>
 <body>
-<div class="header">
-<h1>⚙️ 控制台</h1>
-<div style="display:flex;align-items:center;gap:12px">
-<span id="userName">-</span>
-<a href="admin.html">管理面板</a>
-<a href="#" onclick="Auth.logout()" style="font-size:12px;color:#999">退出</a>
+  <header class="header" style="background:linear-gradient(135deg,#1a1a2e 0%,#16213e 100%);">
+    <div class="container">
+      <h1 style="color:#e0e0e0;">⚙ 控制台</h1>
+      <div class="header-info">
+        <div class="user-info">
+          <span id="userName" style="color:#ccc;">-</span>
+          <span class="role-badge" id="userRole" style="background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;">超级管理员</span>
+        </div>
+        <button class="btn btn-secondary btn-sm" onclick="Auth.logout()" style="background:rgba(255,255,255,0.1);color:#ccc;border-color:rgba(255,255,255,0.2);">退出</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <div class="console-nav" id="cNav"></div>
+
+    <!-- Tab: 总览 -->
+    <div id="tab-overview" style="display:none;"></div>
+
+    <!-- Tab: 账号管理 -->
+    <div id="tab-accounts" style="display:none;"></div>
+
+    <!-- Tab: 订单编辑 -->
+    <div id="tab-orderEdit" style="display:none;">
+      <div class="c-card">
+        <h3>📝 订单完全编辑</h3>
+        <div class="order-select-bar">
+          <label style="font-size:13px;color:#555;">选择订单：</label>
+          <select id="editOrderSel" onchange="loadOrderForEdit(this.value)" style="flex:1;min-width:200px;">
+            <option value="">-- 加载中... --</option>
+          </select>
+          <button class="btn btn-primary btn-sm" onclick="refreshOrderSelect()">🔄 刷新列表</button>
+        </div>
+        <div id="editOrderArea">
+          <p style="text-align:center;color:#999;padding:30px;">请从上方下拉框选择一个订单进行编辑</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tab: 业务员 -->
+    <div id="tab-spManage" style="display:none;"></div>
+
+    <!-- Tab: 操作日志 -->
+    <div id="tab-logs" style="display:none;">
+      <div class="c-card">
+        <h3>📋 操作记录</h3>
+        <div id="logArea" class="log-area"><div class="lw">等待操作...</div></div>
+      </div>
+    </div>
+  </main>
+
+  <!-- 订单编辑模态框 -->
+  <div class="modal-overlay" id="editModal">
+    <div class="modal-box" style="width:95%;max-width:800px;">
+      <div class="modal-head">
+        <h3 id="modalTitle">编辑订单</h3>
+        <button class="modal-close" onclick="closeEditModal()">&times;</button>
+      </div>
+      <div class="modal-body" id="modalBody"></div>
+    </div>
+  </div>
+
+  <footer class="footer" style="background:#1a1a2e;color:#555;">&copy; 控制台 · 系统管理</footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/config.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    if (!Auth.isSuper()) { window.location.href = 'login.html'; } else { initC(); }
+
+    const TABS = [
+      {id:'overview',icon:'📊',label:'系统总览'},
+      {id:'accounts',icon:'👤',label:'账号管理'},
+      {id:'orderEdit',icon:'✏️',label:'订单编辑'},
+      {id:'spManage',icon:'👥',label:'业务员'},
+      {id:'logs',icon:'📋',label:'操作日志'}
+    ];
+    let activeTab = 'overview';
+    const logs = [];
+
+    function log(msg,type){const t={i:'li',s:'ls',e:'le',w:'lw'}[type]||'lw';logs.push({m:msg,t:t,dt:new Date().toLocaleTimeString()});renderLogs();}
+
+    function initC(){
+      document.getElementById('userName').textContent = Auth.getUser().full_name || 'Admin';
+      renderNav();
+      switchTab('overview');
+    }
+
+    function renderNav(){
+      const nav=document.getElementById('cNav');
+      nav.innerHTML=TABS.map(t=>`<button class="c-tab${t.id===activeTab?' active':''}" onclick="switchTab('${t.id}')">${t.icon} ${t.label}</button>`).join('');
+    }
+
+    function switchTab(id){
+      activeTab=id;
+      renderNav();
+      TABS.forEach(t=>{const el=document.getElementById('tab-'+t.id);el&&(el.style.display=t.id===id?'':'none');});
+      if(id==='overview')loadOverview();
+      if(id==='accounts')loadAccounts();
+      if(id==='orderEdit'){refreshOrderSelect();document.getElementById('editOrderArea').innerHTML='<p style="text-align:center;color:#999;padding:30px;">请从上方下拉框选择一个订单进行编辑</p>';}
+      if(id==='spManage')loadSpManage();
+      if(id==='logs')renderLogs();
+    }
+
+    // ======== Overview ========
+    async function loadOverview(){
+      const c=document.getElementById('tab-overview');
+      c.innerHTML=`<div class="stat-grid-c"><div class="stat-box"><div class="num" id="oTotal">-</div><div class="lbl">总订单</div></div><div class="stat-box"><div class="num" id="oUsers">-</div><div class="lbl">注册用户</div></div><div class="stat-box"><div class="num" id="oSp">-</div><div class="lbl">业务员</div></div><div class="stat-box"><div class="num" id="oActive">-</div><div class="lbl">活跃订单</div></div></div><div id="oDetail" class="c-card"><h3>📈 各状态分布</h3><p style="color:#999;">加载中...</p></div>`;
+      try{
+      const stats=await API.getOrderStats();
+      document.getElementById('oTotal').textContent=stats?.total??'-';
+      document.getElementById('oActive').textContent=((stats?.by_status?.['调货中']||0)+(stats?.by_status?.['路途中']||0))||'-';
+      const users=await API.getAllUsers();
+      document.getElementById('oUsers').textContent=(users?.data||[]).length;
+      const spData=await API.getAllSalespeople(true);
+      document.getElementById('oSp').textContent=(spData?.data||[]).filter(s=>s.is_active!==false).length;
+      let h='<div style="display:flex;gap:10px;flex-wrap:wrap;">';
+      ['调货中','路途中','已到货','已完结'].forEach(s=>{const n=stats?.by_status?.[s]||0;const cl={'调货中':'#e67e22','路途中':'#3498db','已到货':'#27ae60','已完结':'#95a5a6'}[s];h+=`<div style="background:${cl}15;color:${cl};padding:12px 20px;border-radius:8px;text-align:center;min-width:100px;"><div style="font-size:22px;font-weight:700;">${n}</div><div style="font-size:11px;">${s}</div></div>`;});
+      h+='</div>';
+      document.getElementById('oDetail').innerHTML=`<h3>📈 各状态分布</h3>${h}`;
+      log('加载系统总览完成','s');
+      }catch(e){console.error('[Console] loadOverview error:',e);document.getElementById('oDetail').innerHTML='<h3>⚠️ 加载失败</h3><p style="color:#f87171;">数据加载异常，请刷新重试<br><small>'+String(e.message||e)+'</small></p>';log('总览加载失败: '+e,'e');}
+    }
+
+    // ======== Accounts ========
+    async function loadAccounts(){
+      const c=document.getElementById('tab-accounts');
+      c.innerHTML='<div class="c-card"><h3>👤 全部账号</h3><p style="color:#999;">加载中...</p></div>';
+      try{
+      const r=await API.getAllUsers();
+      const users=r.data||[];
+      let h=`<div class="c-card"><h3>👤 全部账号 (${users.length})</h3><table class="user-table"><tr><th>ID</th><th>邮箱</th><th>姓名</th><th>角色</th><th>创建时间</th><th>操作</th></tr>`;
+      users.forEach(u=>{
+        const rn={super_admin:'role-super',admin:'role-admin',warehouse:'role-wh',sales:'role-sales'}[u.role]||'';
+        const rl={super_admin:'超级管理员',admin:'管理员',warehouse:'仓库人员',sales:'业务员'}[u.role]||u.role;
+        h+=`<tr><td style="font-family:monospace;font-size:10px;color:#aaa;">${u.id.substring(0,8)}...</td><td>${App.escapeHtml(u.email)}</td><td>${App.escapeHtml(u.full_name||'-')}</td><td><span class="role-badge-s ${rn}">${rl}</span></td><td style="font-size:11px;color:#999;">${App.formatDate(u.created_at)}</td><td>`;
+        if(u.role!=='super_admin'){
+          h+=`<select onchange="changeUserRole('${u.id}',this.value)" style="font-size:11px;padding:2px 6px;"><option value="" disabled ${u.role===u.value?'selected':''}>改角色</option><option value="admin" ${u.role==='admin'?'selected':''}>管理员</option><option value="warehouse" ${u.role==='warehouse'?'selected':''}>仓库</option><option value="sales" ${u.role==='sales'?'selected':''}>业务员</option></select>`;
+        } else {
+          h+=`<span style="font-size:11px;color:#aaa;">🔒 不可更改</span>`;
+        }
+        h+='</td></tr>';
+      });
+      h+='</table></div>';
+      c.innerHTML=h;
+      }catch(e){console.error('[Console] loadAccounts error:',e);c.innerHTML='<div class="c-card"><h3>⚠️ 加载失败</h3><p style="color:#f87171;">账号列表加载异常: '+String(e.message||e)+'</p></div>';}
+    }
+
+    async function changeUserRole(uid,newRole){
+      if(!confirm('确定要修改此用户的角色吗？'))return;
+      const {error}=await API.updateUserRole(uid,newRole);
+      if(error){showToast('修改失败: '+error.message,'error');log(`修改角色失败 ${uid}`,'e');}
+      else{showToast('✅ 角色已更新 → '+newRole,'success');log(`用户 ${uid} 角色 → ${newRole}`,'s');loadAccounts();}
+    }
+
+    // ======== Order Edit ========
+    let allOrders=[];
+    async function refreshOrderSelect(){
+      const sel=document.getElementById('editOrderSel');
+      try{
+      const r=await API.getOrders();
+      allOrders=r.data||[];
+      sel.innerHTML='<option value="">-- 选择订单 --</option>'+allOrders.map(o=>`<option value="${o.id}">${App.escapeHtml(o.invoice_no)} | ${o.salesperson_name||'-'} | ${o.order_date||'-'} | ${o.quantity||'-'}</option>`).join('');
+      log(`加载了 ${allOrders.length} 个订单`,'i');
+      }catch(e){console.error('[Console] refreshOrderSelect error:',e);sel.innerHTML='<option value="">⚠️ 加载失败，请刷新</option>';}
+    }
+
+    async function loadOrderForEdit(oid){
+      if(!oid)return;
+      const area=document.getElementById('editOrderArea');
+      area.innerHTML='<p style="text-align:center;color:#999;padding:20px;">加载中...</p>';
+      const order=allOrders.find(o=>String(o.id)===oid);
+      if(!order){area.innerHTML='<p style="text-align:red;color:#f87171;">未找到订单数据</p>';return;}
+      renderEditForm(order);
+    }
+
+    function renderEditForm(order){
+      const area=document.getElementById('editOrderArea');
+      let products=[];
+      if(typeof order.product_model==='string'&&order.product_model.startsWith('[')){try{products=JSON.parse(order.product_model);}catch(e){}}
+      const prodJson=products.length?JSON.stringify(products):'';
+
+      area.innerHTML=`
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+  <h4 style="margin:0;color:#333;">📝 编辑: <strong>${App.escapeHtml(order.invoice_no)}</strong> <span style="font-size:12px;color:#888;">ID: ${order.id}</span></h4>
+  <div style="display:flex;gap:8px;">
+    <button class="btn btn-danger btn-sm" onclick="deleteOrderHere(${order.id})">🗑 删除此单</button>
+  </div>
 </div>
-</div>
+<form id="editForm" onsubmit="saveEditedOrder(event,${order.id})">
+  <div class="form-row-c">
+    <div class="form-group-c"><label>发票号 *</label><input type="text" id="e_invoice_no" value="${App.escapeHtml(order.invoice_no)}" required style="width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:6px;"></div>
+    <div class="form-group-c"><label>单据日期</label><input type="date" id="e_order_date" value="${order.order_date||''}" style="width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:6px;"></div>
+    <div class="form-group-c"><label>总数量</label><input type="number" id="e_quantity" value="${order.quantity||0}" min="0" style="width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:6px;"></div>
+  </div>
+  <div class="form-row-c">
+    <div class="form-group-c"><label>状态</label><select id="e_order_status" style="width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:6px;">
+      <option value="">- 待填写 -</option>${CONFIG.ORDER_STATUSES.map(s=>`<option value="${s}" ${s===order.order_status?'selected':''}>${s}</option>`).join('')}
+    </select></div>
+    <div class="form-group-c"><label>业务员</label><input type="text" id="e_salesperson_name" value="${App.escapeHtml(order.salesperson_name||'')}" style="width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:6px;"></div>
+    <div class="form-group-c"><label>发货时间</label><input type="date" id="e_shipping_date" value="${order.shipping_date||''}" style="width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:6px;"></div>
+  </div>
+  <div class="form-row-c">
+    <div class="form-group-c"><label>仓库备注</label><input type="text" id="e_warehouse_notes" value="${App.escapeHtml(order.warehouse_notes||'')}" style="width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:6px;"></div>
+  </div>
 
-<div class="container">
-<div class="stats">
-<div class="stat"><div class="num" id="sTotal">0</div><div class="label">总订单</div></div>
-<div class="stat"><div class="num" id="sPending">0</div><div class="label">调货中</div></div>
-<div class="stat"><div class="num" id="sTransit">0</div><div class="label">路途中</div></div>
-<div class="stat"><div class="num" id="sArrived">0</div><div class="label">已到货</div></div>
-<div class="stat"><div class="num" id="sDone">0</div><div class="label">已完结</div></div>
-</div>
+  <div class="prod-edit-area">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;"><label style="font-size:13px;font-weight:500;color:#444;">📦 产品明细（每行独立）</label><span id="eProdSum" style="font-size:12px;color:#667eea;"></span></div>
+    <div style="display:flex;gap:6px;padding:6px 8px;background:#f0f4ff;border-radius:6px;font-size:11px;color:#666;"><span style="width:28px;"></span><span style="flex:1;">品牌</span><span style="flex:1.4;">型号</span><span style="width:50px;text-align:center;">数量</span><span style="flex:1;">货期</span><span style="width:24px;"></span></div>
+    <div id="eProductRows"></div>
+    <div style="display:flex;gap:8px;margin-top:8px;padding-top:8px;border-top:1px dashed #ddd;">
+      <button type="button" onclick="eAddRow()" style="padding:5px 14px;background:#f0f4ff;color:#667eea;border:1px dashed #99aaff;border-radius:5px;font-size:12px;cursor:pointer;">+ 添加行</button>
+    </div>
+  </div>
 
-<div class="card">
-<h3>业务员订单统计</h3>
-<div id="spStats"></div>
-</div>
+  <div style="margin-top:16px;display:flex;gap:10px;">
+    <button type="submit" class="btn btn-primary">💾 保存全部修改</button>
+    <button type="button" class="btn btn-secondary" onclick="refreshOrderSelect();document.getElementById('editOrderSel').value='${order.id}';loadOrderForEdit('${order.id}');">↺ 重置</button>
+  </div>
 
-<div class="card">
-<h3>账号管理</h3>
-<div id="accountsList"></div>
-</div>
-</div>
+  <!-- 留言区域 -->
+  <div class="cmsg-area">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+      <span style="font-size:13px;font-weight:500;color:#444;">💬 订单留言</span>
+      <span id="cmsgCount" style="font-size:11px;color:#999;"></span>
+    </div>
+    <div class="cmsg-list" id="cmsgList"><p style="color:#bbb;text-align:center;padding:12px;font-size:12px;">加载中...</p></div>
+    <div style="display:flex;gap:6px;margin-top:8px;">
+      <input type="text" id="cmsgInput" placeholder="以超管身份留言..." style="flex:1;padding:7px 10px;border:1px solid #ddd;border-radius:6px;font-size:12px;" onkeydown="if(event.key==='Enter'){event.preventDefault();sendCMsg(${order.id});}">
+      <button type="button" class="btn btn-sm" onclick="sendCMsg(${order.id})" style="font-size:11px;">发送</button>
+      <button type="button" class="btn btn-sm" style="font-size:11px;background:#f5f5f5;color:#888;" onclick="markAllReadC(${order.id})">全部标已读</button>
+    </div>
+  </div>
+</form>`;
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="js/config.js"></script>
-<script src="js/auth.js"></script>
-<script src="js/api.js"></script>
-<script>
-document.addEventListener('DOMContentLoaded', () => {
-  if (!Auth.requireRole(['super_admin'])) return;
-  init();
-});
+      window._ePrc=0;
+      if(products&&products.length) products.forEach(p=>eAddRow(p));
+      else eAddRow();
+      updateESum();
+      loadCMsgs(order.id);
+    }
 
-async function init() {
-  const user = Auth.getUser();
-  document.getElementById('userName').textContent = user.full_name || user.email;
-  await loadStats();
-  await loadAccounts();
-}
+    function eAddRow(data){
+      window._ePrc=(window._ePrc||0)+1;
+      const n=window._ePrc;
+      const d=document.getElementById('eProductRows');
+      const row=document.createElement('div');
+      row.style='display:flex;gap:6px;align-items:center;padding:6px 8px;margin-bottom:3px;background:#fff;border-radius:4px;border:0.5px solid #e0e0e0;';
+      row.id='eprow-'+n;
+      row.innerHTML=`<span style="font-size:11px;color:#aaa;width:28px;">#${n}</span><input type="text" placeholder="品牌" value="${App.escapeHtml(data?data.brand||'':'')}" style="flex:1;padding:5px 7px;font-size:12px;border:1px solid #ddd;border-radius:4px;" class="ep-b"><input type="text" placeholder="型号" value="${App.escapeHtml(data?data.model||'':'')}" style="flex:1.4;padding:5px 7px;font-size:12px;border:1px solid #ddd;border-radius:4px;" class="ep-m"><input type="number" placeholder="数量" value="${data?(data.qty||''):''}" min="0" style="width:50px;padding:5px 4px;font-size:12px;border:1px solid #ddd;border-radius:4px;text-align:center;" class="ep-q"><input type="text" placeholder="货期" value="${App.escapeHtml(data?data.delivery||'':'')}" style="flex:1;padding:5px 7px;font-size:12px;border:1px solid #ddd;border-radius:4px;" class="ep-d"><button type="button" onclick="this.parentElement.remove();updateESum();renumE();" style="padding:0 6px;background:none;border:none;cursor:pointer;color:#e24b4a;font-size:17px;">×</button>`;
+      d.appendChild(row);
+      row.querySelectorAll('input').forEach(i=>i.addEventListener('input',updateESum));
+      updateESum();
+    }
 
-async function loadStats() {
-  const stats = await API.getOrderStats();
-  document.getElementById('sTotal').textContent = stats.total;
-  document.getElementById('sPending').textContent = stats.byStatus['调货中'] || 0;
-  document.getElementById('sTransit').textContent = stats.byStatus['路途中'] || 0;
-  document.getElementById('sArrived').textContent = stats.byStatus['已到货'] || 0;
-  document.getElementById('sDone').textContent = stats.byStatus['已完结'] || 0;
+    function renumE(){document.querySelectorAll('#eProductRows > div').forEach((r,i)=>r.querySelector('span').textContent='#'+(i+1));}
+    function updateESum(){let t=0,c=0;document.querySelectorAll('#eProductRows .ep-q').forEach(i=>{const v=parseInt(i.value);if(!isNaN(v)&&v>0){t+=v;c++;}});document.getElementById('eProdSum').textContent=c?`${c}产品·总量${t}`:'';}
 
-  const sps = stats.bySalesperson.sort((a,b) => b.count - a.count);
-  let html = '<table><thead><tr><th>业务员</th><th>订单数</th></tr></thead><tbody>';
-  sps.forEach(s => { html += `<tr><td>${s.name}</td><td>${s.count}</td></tr>`; });
-  html += '</tbody></table>';
-  document.getElementById('spStats').innerHTML = html || '<div class="loading">暂无数据</div>';
-}
+    function collectEProducts(){
+      const p=[];let ok=false;
+      document.querySelectorAll('#eProductRows > div').forEach(r=>{
+        const b=r.querySelector('.ep-b').value.trim(),m=r.querySelector('.ep-m').value.trim(),qv=r.querySelector('.ep-q').value.trim(),d=r.querySelector('.ep-d').value.trim(),q=qv?parseInt(qv):0;
+        if(m||b){p.push({brand:b,model:m,qty:Math.max(0,q),delivery:d});if(m)ok=true;}
+      });
+      return{products:p,ok};
+    }
 
-async function loadAccounts() {
-  const { data } = await API.getProfiles();
-  if (!data) return;
-  let html = '<table><thead><tr><th>邮箱</th><th>角色</th></tr></thead><tbody>';
-  data.forEach(p => {
-    const rn = { super_admin:'超级管理员', admin:'管理员', warehouse:'仓库', sales:'业务员' }[p.role] || p.role;
-    html += `<tr><td>${p.email}</td><td>${rn}</td></tr>`;
-  });
-  html += '</tbody></table>';
-  document.getElementById('accountsList').innerHTML = html;
-}
-</script>
+    async function saveEditedOrder(e,oid){
+      e.preventDefault();
+      const {products:prods,ok}=collectEProducts();
+      const payload={
+        invoice_no:document.getElementById('e_invoice_no').value.trim(),
+        order_date:document.getElementById('e_order_date').value||null,
+        quantity:parseInt(document.getElementById('e_quantity').value)||0,
+        order_status:document.getElementById('e_order_status').value||null,
+        salesperson_name:document.getElementById('e_salesperson_name').value.trim(),
+        shipping_date:document.getElementById('e_shipping_date').value||null,
+        warehouse_notes:document.getElementById('e_warehouse_notes').value.trim(),
+        product_model:JSON.stringify(prods)
+      };
+      if(!payload.invoice_no||!ok){showToast('发票号和至少一个型号为必填','error');return;}
+      const{error}=await API.updateOrder(oid,payload);
+      if(error){showToast('保存失败: '+error.message,'error');log(`订单 ${oid} 保存失败: ${error.message}`,'e');}
+      else{showToast('✅ 订单已更新！','success');log(`订单 ${oid}(${payload.invoice_no}) 已完整编辑保存`,'s');refreshOrderSelect();}
+    }
+
+    async function deleteOrderHere(oid){
+      if(!confirm('⚠️ 确定删除此订单？不可恢复！'))return;
+      const{error}=await API.deleteOrder(oid);
+      if(error){showToast('删除失败: '+error.message,'error');}
+      else{showToast('订单已删除','success');log(`订单 ${oid} 已删除`,'s');document.getElementById('editOrderArea').innerHTML='<p style="text-align:center;color:#999;padding:30px;">订单已删除，请重新选择</p>';refreshOrderSelect();}
+    }
+
+    // ======== Salespeople ========
+    async function loadSpManage(){
+      const c=document.getElementById('tab-spManage');
+      try{
+      const r=await API.getAllSalespeople(true);
+      const list=r.data||[];
+      c.innerHTML=`<div class="c-card"><h3>➕ 快速添加</h3><div class="form-row-c" style="margin-bottom:12px;"><input type="text" id="nsp_name" placeholder="姓名" style="flex:1;padding:7px 10px;border:1px solid #ddd;border-radius:6px;"><input type="text" id="nsp_code" placeholder="识别码(选填)" style="flex:1;padding:7px 10px;border:1px solid #ddd;border-radius:6px;"><button class="btn btn-primary btn-sm" onclick="quickAddSp()">添加</button></div></div>
+<div class="c-card"><h3>👥 全部业务员 (${list.length})</h3><table class="user-table"><tr><th>姓名</th><th>识别码</th><th>状态</th><th>操作</th></tr>`+
+      list.map(sp=>{
+        const ac=sp.is_active!==false;
+        return `<tr><td>${App.escapeHtml(sp.name)}</td><td style="font-family:monospace;">${App.escapeHtml(sp.access_code||'-')}</td><td>${ac?'✅ 正常':'⛔ 停用'}</td><td>
+          ${ac?`<button class="btn btn-xs" style="background:#fee;color:#c00;border:1px solid #fcc;" onclick="toggleSpStatus(${sp.id},false)">停用</button>`
+            :`<button class="btn btn-xs" style="background:#efe;color:#080;border:1px solid #cfc;" onclick="toggleSpStatus(${sp.id},true)">恢复</button>`}
+          <button class="btn btn-xs" style="background:#eef;color:#04c;border:1px solid #dde;" onclick="updateSpCode(${sp.id})">改码</button>
+        </td></tr>`;
+      }).join('')+'</table></div>';
+      }catch(e){console.error('[Console] loadSpManage error:',e);c.innerHTML='<div class="c-card"><h3>⚠️ 加载失败</h3><p style="color:#f87171;">业务员列表加载异常: '+String(e.message||e)+'</p></div>';}
+    }
+
+    async function quickAddSp(){
+      const n=document.getElementById('nsp_name').value.trim(),code=document.getElementById('nsp_code').value.trim();
+      if(!n){showToast('输入姓名','error');return;}
+      const d={name:n,is_active:true};if(code)d.access_code=code.toUpperCase().replace(/[^A-Z0-9]/g,'');
+      const{data,error}=await API.addSalesperson(d);
+      if(error){showToast(error.message,'error');}
+      else{showToast(`已添加 ${data.access_code||''}`,'success');log(`业务员「${n}」已添加`,'s');document.getElementById('nsp_name').value='';document.getElementById('nsp_code').value='';loadSpManage();}
+    }
+    async function toggleSpStatus(id,active){
+      const{error}=await API.updateSalesperson(id,{is_active:active});
+      if(error)showToast(error.message,'error');else{showToast(active?'已恢复':'已停用','success');log(`业务员 ${id} → ${active?'启用':'停用'}`,'s');loadSpManage();}
+    }
+    async function updateSpCode(id){
+      const newCode=prompt('输入新的识别码:');
+      if(newCode===null)return;
+      const c=newCode.toUpperCase().replace(/[^A-Z0-9]/g,'');
+      if(!c){showToast('无效格式','error');return;}
+      const{error}=await API.updateSalesperson(id,{access_code:c});
+      if(error){if(String(error.message).includes('unique'))showToast('该识别码已存在','error');else showToast(error.message,'error');}
+      else{showToast(`识别码 → ${c}`,'success');loadSpManage();}
+    }
+
+    // ======== Logs ========
+    function renderLogs(){
+      const la=document.getElementById('logArea');
+      if(!logs.length){la.innerHTML='<div class="lw">暂无操作记录</div>';return;}
+      la.innerHTML=logs.slice(-50).reverse().map(l=>`<div><span class="lw">[${l.dt}]</span> <span class="${l.t}">${l.m}</span></div>`).join('');
+    }
+
+    function closeEditModal(){document.getElementById('editModal').classList.remove('show');}
+
+    // ======== Console Messages ========
+    async function loadCMsgs(orderId) {
+      const listEl = document.getElementById('cmsgList');
+      const countEl = document.getElementById('cmsgCount');
+      const { data: msgs } = await API.getMessages(orderId);
+      if (!msgs || msgs.length === 0) {
+        listEl.innerHTML = '<p style="color:#bbb;text-align:center;padding:12px;font-size:12px;">暂无留言</p>';
+        countEl.textContent = '';
+        return;
+      }
+      let html = '';
+      msgs.forEach(m => {
+        const isSelf = (m.author_role === 'super_admin');
+        let cls = 'cmsg-sales';
+        if (isSelf) cls = 'cmsg-self';
+        else if (m.author_role === 'warehouse') cls = 'cmsg-wh';
+        else if (m.author_role === 'admin') cls = 'cmsg-admin';
+        const roleLabel = isSelf ? '我（超管）' : `${m.author_name || m.author_role}`;
+        const timeStr = new Date(m.created_at).toLocaleString('zh-CN', { month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' });
+        const unread = !m.is_read && !isSelf ? ' <span style="background:#e07a5f;color:#fff;font-size:9px;padding:1px 4px;border-radius:4px;">新</span>' : '';
+        html += `<div class="cmsg-item ${cls}">${App.escapeHtml(m.content).replace(/\n/g,'<br>')}<div class="cmsg-meta">${roleLabel} · ${timeStr}${unread}${isSelf ? '' : ` <a href="#" onclick="deleteCMsg(${m.id},${orderId})" style="margin-left:6px;color:#e24b4a;text-decoration:none;font-size:10px;">删除</a>`}</div></div>`;
+      });
+      listEl.innerHTML = html;
+      countEl.textContent = `共 ${msgs.length} 条`;
+    }
+
+    async function sendCMsg(orderId) {
+      const input = document.getElementById('cmsgInput');
+      const content = input.value.trim();
+      if (!content) return;
+      input.value = '';
+      const user = Auth.getUser();
+      const { error } = await API.addMessage({
+        order_id: orderId,
+        author_role: 'super_admin',
+        author_name: user.full_name || user.email,
+        content: content
+      });
+      if (error) { showToast('发送失败: ' + error.message, 'error'); input.value = content; return; }
+      showToast('✅ 留言已发送', 'success');
+      log(`超管对订单 ${orderId} 发送留言`, 'i');
+      loadCMsgs(orderId);
+    }
+
+    async function deleteCMsg(msgId, orderId) {
+      if (!confirm('确定删除此条留言？')) return;
+      const { error } = await API.deleteMessage(msgId);
+      if (error) { showToast('删除失败', 'error'); return; }
+      log(`删除了留言 #${msgId}`, 'w');
+      loadCMsgs(orderId);
+    }
+
+    async function markAllReadC(orderId) {
+      await API.markMessagesRead(orderId, 'sales');
+      await API.markMessagesRead(orderId, 'warehouse');
+      await API.markMessagesRead(orderId, 'admin');
+      showToast('✅ 全部标为已读', 'success');
+      loadCMsgs(orderId);
+    }
+
+    // Toast 复用全局的即可
+  </script>
 </body>
 </html>
