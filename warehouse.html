@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>订单管理 - 仓库</title>
+  <title>进度回复系统 - 仓库</title>
   <link rel="stylesheet" href="css/style.css?v=1780048640">
   <style>
     /* 留言面板 */
@@ -45,7 +45,7 @@
 <body>
   <header class="header">
     <div class="container">
-      <h1>📦 订单管理系统 - 仓库</h1>
+      <h1>📦 进度回复系统 - 仓库</h1>
       <div class="header-info">
         <div class="user-info">
           <span id="userName">仓库人员</span>
@@ -78,7 +78,7 @@
       </div>
 
       <p style="font-size:13px;color:#888;margin-bottom:12px;">
-        💡 你的权限：更新订单状态、填写<span style="color:#e07a5f;font-weight:600;">发货时间</span>和<span style="color:#e07a5f;font-weight:600;">快递单号</span>、添加仓库备注
+        💡 你的权限：更新订单状态、填写<span style="color:#e07a5f;font-weight:600;">预计发货时间</span>和<span style="color:#e07a5f;font-weight:600;"></span>、添加进度回复
       </p>
 
       <div id="ordersContainer">
@@ -88,7 +88,7 @@
   </main>
 
   <footer class="footer">
-    © <span id="footerYear"></span> 订单管理系统
+    © <span id="footerYear"></span> 进度回复系统
   </footer>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -201,11 +201,11 @@
             <table>
               <thead>
                 <tr>
-                  <th>发票号</th><th style="cursor:pointer;user-select:none;white-space:nowrap;" onclick="toggleDateSort()">单据日期 <span id="whDateSortIcon" style="font-size:11px;color:#999;">↓ 降序</span></th><th style="min-width:200px;">产品明细</th>
+                  <th>到款单号</th><th style="cursor:pointer;user-select:none;white-space:nowrap;" onclick="toggleDateSort()">单据日期 <span id="whDateSortIcon" style="font-size:11px;color:#999;">↓ 降序</span></th><th style="min-width:200px;">产品明细</th>
                   <th>总数量</th><th>业务员</th>
-                  <th style="color:#e07a5f;font-weight:600;">📅 发货时间</th>
-                  <th style="color:#e07a5f;font-weight:600;">📦 快递单号</th>
-                  <th>仓库备注</th><th style="min-width:70px;">操作</th>
+                  <th style="color:#e07a5f;font-weight:600;">📅 预计发货时间</th>
+                  <th style="color:#e07a5f;font-weight:600;">进度回复单号</th>
+                  <th>进度回复</th><th style="min-width:70px;">操作</th>
                 </tr>
               </thead>
               <tbody>`;
@@ -226,20 +226,20 @@
                 value="${order.shipping_date || ''}"
                 onchange="updateShipping(${order.id}, this.value)"
                 style="width:150px;padding:4px 6px;font-size:13px;"
-                title="由仓库填写实际发货时间">
+                title="由进度回复实际预计发货时间">
             </td>
             <td>
               <input type="text" class="form-control tracking-input"
                 value="${App.escapeHtml(order.tracking_no || '')}"
                 onblur="updateTracking(${order.id}, this.value)"
-                placeholder="填写快递单号"
+                placeholder="填写"
                 style="width:150px;padding:4px 6px;font-size:13px;"
-                title="由仓库填写快递/物流单号">
+                title="由进度回复快递/物流单号">
             </td>
             <td>
               <input type="text" class="notes-input warehouse-notes"
                 value="${App.escapeHtml(order.warehouse_notes || '')}"
-                onblur="updateWarehouseNotes(${order.id}, this.value)" placeholder="仓库备注">
+                onblur="updateWarehouseNotes(${order.id}, this.value)" placeholder="进度回复">
             </td>
             <td style="display:flex;gap:4px;flex-wrap:wrap;">
               <button class="btn btn-sm" onclick="openWhMsgPanel(${order.id},'${App.escapeHtml(order.invoice_no)}')" style="font-size:11px;padding:3px 8px;background:#fdfbf7;color:#e07a5f;border:1px solid #f0d9cb;">💬留言</button>
@@ -299,14 +299,14 @@
 
     async function updateShipping(id, dateVal) {
       const { error } = await API.updateOrder(id, { shipping_date: dateVal || null });
-      if (error) showToast('保存发货时间失败: ' + error.message, 'error');
-      else console.log('[Warehouse] 发货时间已更新:', dateVal);
+      if (error) showToast('保存预计发货时间失败: ' + error.message, 'error');
+      else console.log('[Warehouse] 预计发货时间已更新:', dateVal);
     }
 
     async function updateTracking(id, noVal) {
       const { error } = await API.updateOrder(id, { tracking_no: noVal.trim() || null });
       if (error) showToast('保存单号失败: ' + error.message, 'error');
-      else console.log('[Warehouse] 快递单号已更新:', noVal);
+      else console.log('[Warehouse] 已更新:', noVal);
     }
 
     async function updateWarehouseNotes(id, notes) {

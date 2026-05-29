@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>订单管理 - 控制台</title>
+  <title>进度回复 - 控制台</title>
   <link rel="stylesheet" href="css/style.css?v=1780048640">
   <style>
     .console-nav{display:flex;gap:4px;flex-wrap wrap;padding:12px 16px;background:linear-gradient(135deg,#1a1a2e 0%,#16213e 50%,#0f3460 100%);border-radius:10px;margin-bottom:18px;align-items:center;}
@@ -251,7 +251,7 @@
 </div>
 <form id="editForm" onsubmit="saveEditedOrder(event,${order.id})">
   <div class="form-row-c">
-    <div class="form-group-c"><label>发票号 *</label><input type="text" id="e_invoice_no" value="${App.escapeHtml(order.invoice_no)}" required style="width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:6px;"></div>
+    <div class="form-group-c"><label>到款单号 *</label><input type="text" id="e_invoice_no" value="${App.escapeHtml(order.invoice_no)}" required style="width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:6px;"></div>
     <div class="form-group-c"><label>单据日期</label><input type="date" id="e_order_date" value="${order.order_date||''}" style="width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:6px;"></div>
     <div class="form-group-c"><label>总数量</label><input type="number" id="e_quantity" value="${order.quantity||0}" min="0" style="width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:6px;"></div>
   </div>
@@ -260,12 +260,12 @@
       <option value="">- 待填写 -</option>${CONFIG.ORDER_STATUSES.map(s=>`<option value="${s}" ${s===order.order_status?'selected':''}>${s}</option>`).join('')}
     </select></div>
     <div class="form-group-c"><label>业务员</label><input type="text" id="e_salesperson_name" value="${App.escapeHtml(order.salesperson_name||'')}" style="width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:6px;"></div>
-    <div class="form-group-c"><label>发货时间</label><input type="date" id="e_shipping_date" value="${order.shipping_date||''}" style="width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:6px;"></div>
+    <div class="form-group-c"><label>预计发货时间</label><input type="date" id="e_shipping_date" value="${order.shipping_date||''}" style="width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:6px;"></div>
   </div>
   <div class="form-row-c">
-    <div class="form-group-c"><label>快递单号</label><input type="text" id="e_tracking_no" value="${App.escapeHtml(order.tracking_no||'')}" style="width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:6px;"></div>
-    <div class="form-group-c"><label>仓库备注</label><input type="text" id="e_warehouse_notes" value="${App.escapeHtml(order.warehouse_notes||'')}" style="width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:6px;"></div>
-    <div class="form-group-c"><label>业务备注</label><input type="text" id="e_sales_notes" value="${App.escapeHtml(order.sales_notes||'')}" style="width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:6px;"></div>
+    <div class="form-group-c"><label></label><input type="text" id="e_tracking_no" value="${App.escapeHtml(order.tracking_no||'')}" style="width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:6px;"></div>
+    <div class="form-group-c"><label>进度回复</label><input type="text" id="e_warehouse_notes" value="${App.escapeHtml(order.warehouse_notes||'')}" style="width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:6px;"></div>
+    <div class="form-group-c"><label></label><input type="text" id="e_sales_notes" value="${App.escapeHtml(order.sales_notes||'')}" style="width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:6px;"></div>
   </div>
 
   <div class="prod-edit-area">
@@ -344,7 +344,7 @@
         sales_notes:document.getElementById('e_sales_notes').value.trim(),
         product_model:JSON.stringify(prods)
       };
-      if(!payload.invoice_no||!ok){showToast('发票号和至少一个型号为必填','error');return;}
+      if(!payload.invoice_no||!ok){showToast('到款单号和至少一个型号为必填','error');return;}
       const{error}=await API.updateOrder(oid,payload);
       if(error){showToast('保存失败: '+error.message,'error');log(`订单 ${oid} 保存失败: ${error.message}`,'e');}
       else{showToast('✅ 订单已更新！','success');log(`订单 ${oid}(${payload.invoice_no}) 已完整编辑保存`,'s');refreshOrderSelect();}
