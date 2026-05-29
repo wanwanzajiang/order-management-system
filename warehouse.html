@@ -32,6 +32,7 @@
         <label style="font-weight:500;color:#555;">状态筛选：</label>
         <select id="filterStatus" class="form-control" style="width:auto;min-width:140px;" onchange="loadOrders()">
           <option value="">全部</option>
+          <option value="__empty__">📋 待处理</option>
           <option value="调货中">调货中（优先处理）</option>
           <option value="路途中">路途中</option>
           <option value="已到货">已到货</option>
@@ -45,7 +46,7 @@
       </div>
 
       <p style="font-size:13px;color:#888;margin-bottom:12px;">
-        💡 你的权限：更新订单状态、填写<span style="color:#e07a5f;font-weight:600;">预计发货时间</span>和<span style="color:#e07a5f;font-weight:600;">快递单号</span>、添加进度回复
+        💡 你的权限：更新订单状态、填写<span style="color:#e07a5f;font-weight:600;">预计发货时间</span>、添加进度回复
       </p>
 
       <div id="ordersContainer">
@@ -92,12 +93,11 @@
     }
 
     async function loadSalespeopleFilter() {
-      const { data } = await SUPABASE.from('orders').select('salesperson_name');
+      const { data } = await SUPABASE.from('salespeople').select('name').eq('is_active', true).order('name');
+      const sel = document.getElementById('filterSp');
       if (data && data.length > 0) {
-        const names = [...new Set(data.map(o => o.salesperson_name).filter(Boolean))].sort();
-        const sel = document.getElementById('filterSp');
-        names.forEach(name => {
-          sel.innerHTML += `<option value="${App.escapeHtml(name)}">${App.escapeHtml(name)}</option>`;
+        data.forEach(sp => {
+          sel.innerHTML += `<option value="${App.escapeHtml(sp.name)}">${App.escapeHtml(sp.name)}</option>`;
         });
       }
     }
@@ -123,7 +123,11 @@
 
       const statusFilter = document.getElementById('filterStatus').value;
       const spFilter = document.getElementById('filterSp').value;
-      if (statusFilter) query = query.eq('order_status', statusFilter);
+      if (statusFilter === '__empty__') {
+        query = query.is('order_status', null);
+      } else if (statusFilter) {
+        query = query.eq('order_status', statusFilter);
+      }
       if (spFilter) query = query.eq('salesperson_name', spFilter);
 
       const { data, error } = await query;
@@ -140,6 +144,43 @@
       renderOrders(data);
     }
 
+    function renderOrderRow(order, groupStatus) {
+      const productsHtml = renderWarehouseProductDetail(order.product_model);
+      const fileBtn = FileOps.renderFileBtn(order, _currentRole);
+      return `<tr data-id="${order.id}">
+        <td><strong>${App.escapeHtml(order.invoice_no)}</strong></td>
+        <td>${order.order_date || '-'}</td>
+        <td style="max-width:260px;font-size:11px;">${productsHtml}</td>
+        <td><strong>${order.quantity || '-'}</strong></td>
+        <td>${App.escapeHtml(order.salesperson_name || '-')}</td>
+        <td>
+          <input type="date" class="form-control ship-date"
+            value="${order.shipping_date || ''}"
+            onchange="updateShipping(${order.id}, this.value)"
+            style="width:150px;padding:4px 6px;font-size:13px;"
+            title="预计发货时间">
+        </td>
+        <td>
+          <input type="text" class="notes-input warehouse-notes"
+            value="${App.escapeHtml(order.warehouse_notes || '')}"
+            onblur="updateWarehouseNotes(${order.id}, this.value)" placeholder="进度回复">
+        </td>
+        <td style="text-align:center;">${order.photo_request ? '📸' : '-'}</td>
+        <td>${order.bring_goods === true ? '✅是' : order.bring_goods === false ? '❌否' : '-'}</td>
+        <td>${order.inspection_date || "-"}</td>
+        <td>${order.return_date || "-"}</td>
+        <td style="display:flex;gap:4px;flex-wrap:wrap;">
+          ${fileBtn}
+          <select class="form-control status-select" onchange="updateStatus(${order.id}, this.value)" style="width:80px;">
+            <option value="">- 待填写 -</option>
+            ${CONFIG.ORDER_STATUSES.map(s =>
+              `<option value="${s}" ${s === order.order_status ? 'selected' : ''}>${s}</option>`
+            ).join('')}
+          </select>
+        </td>
+      </tr>`;
+    }
+
     function renderOrders(orders) {
       const container = document.getElementById('ordersContainer');
 
@@ -154,6 +195,23 @@
       const statusIcon = { '调货中': '📦', '路途中': '🚚', '已到货': '✅', '已完结': '🏁' };
 
       let html = '';
+      // 先渲染「待处理」分组——管理员新建的订单状态为空，仓库需要优先看到
+      const pendingOrders = groups[null] || [];
+      if (pendingOrders.length > 0) {
+        html += `<div class="card" style="margin-bottom:16px;border-left:4px solid #e07a5f;padding:16px;">
+          <h4 style="margin:0 0 12px 0;">📋 待处理 (${pendingOrders.length})</h4>
+          <div class="table-wrapper" style="overflow-x:auto;">
+            <table><thead><tr>
+              <th>到款单号</th><th>单据日期</th><th>产品明细</th><th>总数量</th><th>业务员</th>
+              <th style="color:#e07a5f;">📅 预计发货时间</th>
+              <th>进度回复</th><th>拍照</th><th>是否带来</th><th>验货时间</th><th>收回时间</th><th>操作</th>
+            </tr></thead><tbody>`;
+        pendingOrders.forEach(order => {
+          html += renderOrderRow(order, '');
+        });
+        html += '</tbody></table></div></div>';
+      }
+
       for (const status of CONFIG.ORDER_STATUSES) {
         if (!groups[status] || groups[status].length === 0) continue;
 
@@ -174,37 +232,7 @@
               <tbody>`;
 
         groups[status].forEach(order => {
-          const productsHtml = renderWarehouseProductDetail(order.product_model);
-          const fileBtn = FileOps.renderFileBtn(order, _currentRole);
-
-          html += `<tr data-id="${order.id}">
-            <td><strong>${App.escapeHtml(order.invoice_no)}</strong></td>
-            <td>${order.order_date || '-'}</td>
-            <td style="max-width:260px;font-size:11px;">${productsHtml}</td>
-            <td><strong>${order.quantity || '-'}</strong></td>
-            <td>${App.escapeHtml(order.salesperson_name || '-')}</td>
-            <td>
-              <input type="date" class="form-control ship-date"
-                value="${order.shipping_date || ''}"
-                onchange="updateShipping(${order.id}, this.value)"
-                style="width:150px;padding:4px 6px;font-size:13px;"
-                title="由进度回复实际预计发货时间">
-            </td>
-            <td>
-              <input type="text" class="notes-input warehouse-notes"
-                value="${App.escapeHtml(order.warehouse_notes || '')}"
-                onblur="updateWarehouseNotes(${order.id}, this.value)" placeholder="进度回复">
-            </td>
-            <td style="text-align:center;">${order.photo_request ? '📸' : '-'}</td><td>${order.bring_goods === true ? '✅是' : order.bring_goods === false ? '❌否' : '-'}</td><td>${order.inspection_date || "-"}</td><td>${order.return_date || "-"}</td><td style="display:flex;gap:4px;flex-wrap:wrap;">
-              ${fileBtn}
-              <select class="form-control status-select" onchange="updateStatus(${order.id}, this.value)" style="width:80px;">
-                <option value="">- 待填写 -</option>
-                ${CONFIG.ORDER_STATUSES.map(s =>
-                  `<option value="${s}" ${s === order.order_status ? 'selected' : ''}>${s}</option>`
-                ).join('')}
-              </select>
-            </td>
-          </tr>`;
+          html += renderOrderRow(order, status);
         });
 
         html += '</tbody></table></div></div>';

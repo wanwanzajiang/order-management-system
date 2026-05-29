@@ -142,6 +142,7 @@
             <option value="">全部业务员</option>
           </select>
           <button class="btn btn-secondary btn-sm" onclick="loadOrders()">刷新列表</button>
+          <button class="btn btn-sm" onclick="exportOrdersCSV()" style="background:#27ae60;color:#fff;border-color:#27ae60;margin-left:auto;">📥 导出CSV</button>
         </div>
         <div id="ordersContainer">
           <div class="loading">加载中...</div>
@@ -511,8 +512,7 @@
               <tr>
                 <th>到款单号</th><th style="cursor:pointer;user-select:none;white-space:nowrap;" onclick="toggleOrderDateSort()">单据日期 <span id="orderDateSortIcon" style="font-size:11px;color:#999;">↓ 降序</span></th><th style="min-width:200px;">产品明细</th>
                 <th>总数量</th><th>状态</th>
-                <th>业务员</th><th>预计发货时间</th><th>快递单号</th>
-                
+                <th>业务员</th><th>预计发货时间</th>
                 <th>创建时间</th><th>操作</th>
               </tr>
             </thead>
@@ -537,7 +537,6 @@
           <td><span class="status-badge ${statusClass}">${order.order_status || '待填写'}</span></td>
           <td>${App.escapeHtml(order.salesperson_name || '-')}</td>
           <td>${order.shipping_date || '-'}</td>
-          <td>${order.tracking_no || '-'}</td>
           <td style="white-space:nowrap;font-size:12px;color:#999;">${App.formatDate(order.created_at)}</td>
           <td>
             <button class="btn btn-danger btn-sm" onclick="deleteOrder(${order.id})">删除</button>
@@ -952,6 +951,53 @@
       setBtnLoading(btn, false, '💾 保存全部修改');
       if (error) { showToast('保存失败: ' + error.message, 'error'); }
       else { showToast('✅ 订单已更新！', 'success'); closeEditModal(); await loadOrders(); }
+    }
+
+    // ========== 导出CSV ==========
+    async function exportOrdersCSV() {
+      let dateFrom = prompt('导出订单：请输入起始日期（YYYY-MM-DD），留空导出全部', '');
+      if (dateFrom === null) return;
+      let dateTo = '';
+      if (dateFrom) {
+        dateTo = prompt('导出订单：请输入截止日期（YYYY-MM-DD）', '');
+        if (dateTo === null) return;
+      }
+
+      showToast('正在导出...', 'info');
+
+      // 查询全部订单
+      let query = SUPABASE.from('orders').select('*').order('created_at', { ascending: false });
+      if (dateFrom) query = query.gte('order_date', dateFrom);
+      if (dateTo) query = query.lte('order_date', dateTo);
+
+      const { data, error } = await query;
+      if (error) { showToast('导出失败: ' + error.message, 'error'); return; }
+      if (!data || data.length === 0) { showToast('没有匹配的订单', 'error'); return; }
+
+      // 构建CSV
+      const headers = ['到款单号','单据日期','产品明细','总数量','状态','业务员','预计发货时间','进度回复','创建时间'];
+      const rows = data.map(o => [
+        o.invoice_no || '',
+        o.order_date || '',
+        (typeof o.product_model === 'string' && o.product_model.startsWith('[') ? JSON.parse(o.product_model).map(p => (p.brand||'')+' '+p.model+' ×'+p.qty).join('; ') : (o.product_model || '')),
+        o.quantity || 0,
+        o.order_status || '',
+        o.salesperson_name || '',
+        o.shipping_date || '',
+        o.warehouse_notes || '',
+        o.created_at ? new Date(o.created_at).toLocaleString('zh-CN') : ''
+      ]);
+
+      const BOM = '\uFEFF';
+      const csv = BOM + headers.join(',') + '\n' + rows.map(r => r.map(c => '"' + String(c).replace(/"/g,'""') + '"').join(',')).join('\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = '订单导出_' + new Date().toISOString().slice(0,10) + '.csv';
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast('✅ 已导出 ' + data.length + ' 条订单', 'success');
     }
 
   </script>
