@@ -46,15 +46,6 @@
     .log-area .ls{color:#4ade80;}
     .log-area .le{color:#f87171;}
     .log-area .li{color:#60a5fa;}
-    /* 超管留言区 */
-    .cmsg-area{background:#f8f9ff;border:1px dashed #c5d1e8;border-radius:8px;padding:14px;margin-top:14px;}
-    .cmsg-list{max-height:180px;overflow-y:auto;}
-    .cmsg-item{padding:7px 10px;border-radius:6px;margin-bottom:5px;font-size:12px;line-height:1.4;}
-    .cmsg-sales{background:#eef1ff;color:#334;}
-    .cmsg-wh{background:#f0f9ff;color:#224;}
-    .cmsg-admin{background:#fef3e2;color:#432;}
-    .cmsg-self{background:#667eea;color:#fff;}
-    .cmsg-meta{font-size:10px;color:#999;margin-top:2px;}
   </style>
 </head>
 <body>
@@ -280,15 +271,11 @@
     <button type="button" class="btn btn-secondary" onclick="refreshOrderSelect();document.getElementById('editOrderSel').value='${order.id}';loadOrderForEdit('${order.id}');">↺ 重置</button>
   </div>
 
-  <!-- 留言区域 -->
-  <div class="cmsg-area">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
       <span style="font-size:13px;font-weight:500;color:#444;">💬 订单留言</span>
       <span id="cmsgCount" style="font-size:11px;color:#999;"></span>
     </div>
-    <div class="cmsg-list" id="cmsgList"><p style="color:#bbb;text-align:center;padding:12px;font-size:12px;">加载中...</p></div>
     <div style="display:flex;gap:6px;margin-top:8px;">
-      <input type="text" id="cmsgInput" placeholder="以超管身份留言..." style="flex:1;padding:7px 10px;border:1px solid #ddd;border-radius:6px;font-size:12px;" onkeydown="if(event.key==='Enter'){event.preventDefault();sendCMsg(${order.id});}">
       <button type="button" class="btn btn-sm" onclick="sendCMsg(${order.id})" style="font-size:11px;">发送</button>
       <button type="button" class="btn btn-sm" style="font-size:11px;background:#f5f5f5;color:#888;" onclick="markAllReadC(${order.id})">全部标已读</button>
     </div>
@@ -413,23 +400,13 @@
         return;
       }
       let html = '';
-      msgs.forEach(m => {
-        const isSelf = (m.author_role === 'super_admin');
-        let cls = 'cmsg-sales';
-        if (isSelf) cls = 'cmsg-self';
-        else if (m.author_role === 'warehouse') cls = 'cmsg-wh';
-        else if (m.author_role === 'admin') cls = 'cmsg-admin';
-        const roleLabel = isSelf ? '我（超管）' : `${m.author_name || m.author_role}`;
         const timeStr = new Date(m.created_at).toLocaleString('zh-CN', { month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' });
-        const unread = !m.is_read && !isSelf ? ' <span style="background:#e07a5f;color:#fff;font-size:9px;padding:1px 4px;border-radius:4px;">新</span>' : '';
-        html += `<div class="cmsg-item ${cls}">${App.escapeHtml(m.content).replace(/\n/g,'<br>')}<div class="cmsg-meta">${roleLabel} · ${timeStr}${unread}${isSelf ? '' : ` <a href="#" onclick="deleteCMsg(${m.id},${orderId})" style="margin-left:6px;color:#e24b4a;text-decoration:none;font-size:10px;">删除</a>`}</div></div>`;
       });
       listEl.innerHTML = html;
       countEl.textContent = `共 ${msgs.length} 条`;
     }
 
     async function sendCMsg(orderId) {
-      const input = document.getElementById('cmsgInput');
       const content = input.value.trim();
       if (!content) return;
       input.value = '';
@@ -440,8 +417,6 @@
         content: content
       });
       if (error) { showToast('发送失败: ' + error.message, 'error'); input.value = content; return; }
-      showToast('✅ 留言已发送', 'success');
-      log(`超管对订单 ${orderId} 发送留言`, 'i');
       loadCMsgs(orderId);
     }
 

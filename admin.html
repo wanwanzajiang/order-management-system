@@ -9,7 +9,6 @@
     #orderEditModal.show{opacity:1;pointer-events:auto;}
     #orderEditModal.show #orderEditBox{transform:translateY(0);}
     .form-row-c{display:flex;gap:12px;flex-wrap:wrap;}
-    /* 留言面板 */
       position:fixed;top:0;left:0;right:0;bottom:0;
       background:rgba(0,0,0,0.45);z-index:10000;display:flex;align-items:center;justify-content:center;
       opacity:0;pointer-events:none;transition:opacity .25s;
@@ -17,15 +16,9 @@
       background:#fff;border-radius:16px;width:92%;max-width:520px;max-height:80vh;display:flex;flex-direction:column;
       box-shadow:0 20px 60px rgba(0,0,0,0.25);transform:translateY(20px);transition:transform .25s;
     }
-    .msg-from-sales{background:#eef1ff;color:#334;border-top-left-radius:4px;align-self:flex-start;}
-    .msg-from-wh{background:#f0f9ff;color:#224;border-top-left-radius:4px;align-self:flex-start;}
-    .msg-self{background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;border-top-right-radius:4px;align-self:flex-end;margin-left:auto;}
-    .msg-meta{font-size:10px;color:#999;margin-top:3px;}
       flex:1;border:1.5px solid #ddd;border-radius:10px;padding:10px 12px;font-size:13px;resize:none;height:48px;font-family:inherit;outline:none;transition:border-color .2s;
     }
-    .msg-unread-dot{width:8px;height:8px;background:#e07a5f;border-radius:50%;display:inline-block;margin-right:4px;animation:pulse 1.5s infinite;}
     @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
-    .msg-count-tag{background:#e07a5f;color:#fff;font-size:10px;padding:1px 6px;border-radius:8px;font-weight:500;cursor:pointer;}
   </style>
 </head>
 <body>
@@ -966,23 +959,15 @@
     
 
     `;
-      document.getElementById('admMsgInput').value = '';
-      document.getElementById('admMsgOverlay').classList.add('show');
-      // 标记所有非管理员留言为已读
     }
 
     
 
     
       let html = '';
-      msgs.forEach(m => {
-        const isSelf = (m.author_role === 'admin' || m.author_role === 'super_admin');
         const timeStr = new Date(m.created_at).toLocaleString('zh-CN', { month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' });
         let roleLabel = '', cls = '';
         if (isSelf) { roleLabel = '我'; cls = 'msg-self'; }
-        else if (m.author_role === 'sales') { roleLabel = '👤 业务·' + m.author_name; cls = 'msg-from-sales'; }
-        else if (m.author_role === 'warehouse') { roleLabel = '🏭 仓库'; cls = 'msg-from-wh'; }
-        else { roleLabel = '👤 ' + m.author_name; cls = 'msg-from-sales'; }
       });
       body.innerHTML = html;
     }
@@ -997,7 +982,6 @@
       });
       if (error) { showToast('发送失败: ' + error.message, 'error'); input.value = content; return; }
       showToast('✅ 已发送', 'success');
-      setTimeout(() => { document.getElementById('admMsgBody').scrollTop = document.getElementById('admMsgBody').scrollHeight; }, 50);
     }
 
     
@@ -1014,8 +998,6 @@
       <div id="orderEditModalBody" style="padding:22px;"></div>
     </div>
   </div>
-  <!-- 留言面板 -->
-        <textarea id="admMsgInput" placeholder="留言..." rows="2"></textarea>
       </div>
     </div>
   </div>
