@@ -65,7 +65,8 @@
         <label style="font-weight:500;color:#555;">状态筛选：</label>
         <select id="filterStatus" class="form-control" style="width:auto;min-width:140px;" onchange="loadOrders()">
           <option value="">全部状态</option>
-          <option value="调货中" selected>调货中（优先处理）</option>
+          <option value="" selected>全部</option>
+          <option value="调货中">调货中（优先处理）</option>
           <option value="路途中">路途中</option>
           <option value="已到货">已到货</option>
           <option value="已完结">已完结</option>
@@ -169,14 +170,10 @@
         return;
       }
 
-      // 获取未读留言数
-      const oids = data.map(o => o.id);
-      const unreadCounts = await API.getUnreadCounts(oids);
-
-      renderOrders(data, unreadCounts);
+      renderOrders(data);
     }
 
-    function renderOrders(orders, unreadCounts) {
+    function renderOrders(orders) {
       const container = document.getElementById('ordersContainer');
 
       orders.sort((a, b) => {
@@ -204,19 +201,18 @@
                   <th>到款单号</th><th style="cursor:pointer;user-select:none;white-space:nowrap;" onclick="toggleDateSort()">单据日期 <span id="whDateSortIcon" style="font-size:11px;color:#999;">↓ 降序</span></th><th style="min-width:200px;">产品明细</th>
                   <th>总数量</th><th>业务员</th>
                   <th style="color:#e07a5f;font-weight:600;">📅 预计发货时间</th>
-                  <th style="color:#e07a5f;font-weight:600;">进度回复单号</th>
-                  <th>进度回复</th><th style="min-width:70px;">操作</th>
+                  <th>进度回复</th>
+                  <th>验货时间</th><th>收回时间</th><th>拍照</th><th>是否带来</th>
+                  <th style="min-width:70px;">操作</th>
                 </tr>
               </thead>
               <tbody>`;
 
         groups[status].forEach(order => {
           const productsHtml = renderWarehouseProductDetail(order.product_model);
-          const uc = (unreadCounts && unreadCounts[order.id]) || 0;
-          const unreadBadge = uc ? `<span class="unread-badge" onclick="openWhMsgPanel(${order.id},'${App.escapeHtml(order.invoice_no)}')">💬 ${uc}条新留言</span>` : '';
 
           html += `<tr data-id="${order.id}">
-            <td><strong>${App.escapeHtml(order.invoice_no)}</strong>${unreadBadge}</td>
+            <td><strong>${App.escapeHtml(order.invoice_no)}</strong></td>
             <td>${order.order_date || '-'}</td>
             <td style="max-width:260px;font-size:11px;">${productsHtml}</td>
             <td><strong>${order.quantity || '-'}</strong></td>
@@ -225,16 +221,18 @@
               <input type="date" class="form-control ship-date"
                 value="${order.shipping_date || ''}"
                 onchange="updateShipping(${order.id}, this.value)"
-                style="width:150px;padding:4px 6px;font-size:13px;"
-                title="由进度回复实际预计发货时间">
+                style="width:130px;padding:4px 6px;font-size:13px;">
             </td>
             <td>
               <input type="text" class="notes-input warehouse-notes"
                 value="${App.escapeHtml(order.warehouse_notes || '')}"
-                onblur="updateWarehouseNotes(${order.id}, this.value)" placeholder="进度回复">
+                onblur="updateWarehouseNotes(${order.id}, this.value)" placeholder="进度回复" style="width:120px;">
             </td>
+            <td>${order.inspection_date || '-'}</td>
+            <td>${order.return_date || '-'}</td>
+            <td>${order.photo_request ? '📸' : '-'}</td>
+            <td>${order.bring_goods === true ? '✅' : order.bring_goods === false ? '❌' : '-'}</td>
             <td style="display:flex;gap:4px;flex-wrap:wrap;">
-              <button class="btn btn-sm" onclick="openWhMsgPanel(${order.id},'${App.escapeHtml(order.invoice_no)}')" style="font-size:11px;padding:3px 8px;background:#fdfbf7;color:#e07a5f;border:1px solid #f0d9cb;">💬留言</button>
               <select class="form-control status-select" onchange="updateStatus(${order.id}, this.value)" style="width:80px;">
                 <option value="">- 待填写 -</option>
                 ${CONFIG.ORDER_STATUSES.map(s =>
