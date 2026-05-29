@@ -40,6 +40,9 @@
         </select>
         <label style="font-weight:500;color:#555;margin-left:12px;">🔍 到款单号：</label>
         <input type="text" id="filterInvoice" class="form-control" placeholder="输入单号搜索" style="width:180px;" onkeydown="if(event.key==='Enter')loadOrders()">
+        <label style="margin-left:8px;font-size:12px;display:flex;align-items:center;gap:3px;cursor:pointer;white-space:nowrap;" onchange="loadOrders()"><input type="checkbox" id="chkPhoto" style="cursor:pointer;"> 需拍照</label>
+        <label style="font-size:12px;display:flex;align-items:center;gap:3px;cursor:pointer;white-space:nowrap;" onchange="loadOrders()"><input type="checkbox" id="chkBring" style="cursor:pointer;"> 需带来</label>
+        <label style="font-size:12px;display:flex;align-items:center;gap:3px;cursor:pointer;white-space:nowrap;" onchange="loadOrders()"><input type="checkbox" id="chkPendingShot" style="cursor:pointer;"> 📸 待拍照</label>
         <button class="btn btn-secondary btn-sm" onclick="loadOrders()" style="margin-left:auto;">🔄 刷新</button>
       </div>
 
@@ -128,7 +131,26 @@
         return;
       }
 
-      renderOrders(data);
+      // 前端筛选：勾选框过滤
+      let filtered = data;
+      const chkPhoto = document.getElementById('chkPhoto').checked;
+      const chkBring = document.getElementById('chkBring').checked;
+      const chkPending = document.getElementById('chkPendingShot').checked;
+
+      if (chkPhoto) filtered = filtered.filter(o => o.photo_request === true);
+      if (chkBring) filtered = filtered.filter(o => o.bring_goods === true);
+      if (chkPending) {
+        filtered = filtered.filter(o => {
+          const files = Array.isArray(o.file_ids) ? o.file_ids : [];
+          return o.photo_request === true && files.length === 0;
+        });
+      }
+      if (filtered.length === 0) {
+        App.showEmpty(container, '没有匹配的订单');
+        return;
+      }
+
+      renderOrders(filtered);
     }
 
     function renderOrderRow(order, groupStatus) {
