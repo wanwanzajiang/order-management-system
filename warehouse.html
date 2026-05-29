@@ -278,6 +278,18 @@
     // ========== 仓库专属操作 ==========
 
     async function updateStatus(id, status) {
+      // 已到货必须填预计发货时间
+      if (status === '已到货') {
+        const row = document.querySelector(`tr[data-id="${id}"]`);
+        const shipInput = row?.querySelector('.ship-date');
+        if (shipInput && !shipInput.value) {
+          showToast('⚠️ 请先填写预计发货时间', 'error');
+          shipInput.focus();
+          shipInput.style.borderColor = '#e24b4a';
+          loadOrders(); // 还原下拉框
+          return;
+        }
+      }
       showToast('更新中...', '');
       const { error } = await API.updateOrder(id, { order_status: status });
       if (error) {
