@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>订单管理 - 管理员</title>
+  <title>进度回复 - 管理员</title>
   <link rel="stylesheet" href="css/style.css">
   <style>
     #orderEditModal.show{opacity:1;pointer-events:auto;}
@@ -46,7 +46,7 @@
 <body>
   <header class="header">
     <div class="container">
-      <h1>📦 订单管理系统 - 管理员</h1>
+      <h1>📦 进度回复系统 - 管理员</h1>
       <div class="header-info">
         <div class="user-info">
           <span id="userName">管理员</span>
@@ -65,7 +65,7 @@
     <!-- Tab 导航 -->
     <div class="tab-nav" id="tabNav">
       <button class="tab-btn active" data-tab="dashboard" onclick="switchTab('dashboard')">📊 数据概览</button>
-      <button class="tab-btn" data-tab="orders" onclick="switchTab('orders')">📋 订单管理</button>
+      <button class="tab-btn" data-tab="orders" onclick="switchTab('orders')">📋 进度回复</button>
       <button class="tab-btn" data-tab="salespeople" onclick="switchTab('salespeople')">👥 业务员管理</button>
     </div>
 
@@ -88,7 +88,7 @@
       </div>
     </div>
 
-    <!-- ===== Tab 2: 订单管理 ===== -->
+    <!-- ===== Tab 2: 进度回复 ===== -->
     <div class="tab-content" id="tab-orders" style="display:none;">
       <!-- 新增订单表单（多产品版） -->
       <div class="card">
@@ -214,7 +214,7 @@
   </main>
 
   <footer class="footer">
-    © <span id="footerYear"></span> 订单管理系统 · 管理员面板
+    © <span id="footerYear"></span> 进度回复系统 · 管理员面板
   </footer>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -461,7 +461,7 @@
       container.innerHTML = html;
     }
 
-    // ========== 订单管理 ==========
+    // ========== 进度回复 ==========
 
     // 加载业务员下拉选项（用于新建订单）
     async function loadSalespeopleSelect() {
