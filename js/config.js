@@ -1,11 +1,9 @@
 const CONFIG = {
-  // 云开发存储配置
   TCB_ENV: 'wanwan-d2gafa9gobac0b79b',
   TCB_REGION: 'ap-shanghai',
-  // Supabase 项目（旧项目可用）
-  SUPABASE_URL: 'https://omhtrpqdxdwbmwfdkgeg.supabase.co',
-  SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9taHRycHFkeGR3Ym13ZmRrZ2VnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk4NTM4MTIsImV4cCI6MjA5NTQyOTgxMn0.N0jQCl0YoTH21nnrrVpn1nDRPVd4PPb5N9beRCTUx9s',
-  SERVICE_ROLE_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9taHRycHFkeGR3Ym13ZmRrZ2VnIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3OTg1MzgxMiwiZXhwIjoyMDk1NDI5ODEyfQ.edhon60BVpLPJSZ7tWnB1XgA4KRTCJUqshHuFuDxlAo',
+  SUPABASE_URL: 'https://nlcudhwgnoljaxmzdiki.supabase.co',
+  SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5sY3VkaHdnbm9samF4bXpkaWtpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAwMjY1NjcsImV4cCI6MjA5NTYwMjU2N30.fHXfSik9Zybyg8XhSTCyQMfpNhUJnMWy93MqEKQ6sVU',
+  SERVICE_ROLE_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5sY3VkaHdnbm9samF4bXpkaWtpIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4MDAyNjU2NywiZXhwIjoyMDk1NjAyNTY3fQ.xBq9MrQx1q-NU8qqV_9tCh7YlmlAJ84A7VSAkhDpOHM',
   ROLES: {
     SUPER: 'super_admin',
     ADMIN: 'admin',
