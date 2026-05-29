@@ -195,6 +195,8 @@
     // 页脚年份
     document.getElementById('footerYear').textContent = new Date().getFullYear();
 
+    let productRowCount = 0;
+
     if (!Auth.requireRole([CONFIG.ROLES.ADMIN, CONFIG.ROLES.SUPER])) {
       // 已重定向
     } else {
@@ -220,7 +222,6 @@
     }
 
     // ========== 初始化 ==========
-    let productRowCount = 0;
 
     async function init() {
       const user = Auth.getUser();
