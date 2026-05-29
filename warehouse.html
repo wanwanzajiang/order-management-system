@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>进度回复 - 仓库</title>
   <link rel="stylesheet" href="css/style.css?v=1780058146">
+  <link rel="stylesheet" href="css/file-panel.css?v=1780058146">
   <style>
     /* 留言面板 */
       position:fixed;top:0;left:0;right:0;bottom:0;
@@ -68,6 +69,14 @@
     </div>
   </main>
 
+  <!-- 文件面板 -->
+  <div class="file-overlay" id="filePanelOverlay" onclick="if(event.target===this)FileOps.close()">
+    <div class="file-panel">
+      <div class="file-header"><h3 id="filePanelTitle">📎 文件</h3><button onclick="FileOps.close()">&times;</button></div>
+      <div class="file-body" id="filePanelBody"></div>
+    </div>
+  </div>
+
   <footer class="footer">
     © <span id="footerYear"></span> 进度回复系统
   </footer>
@@ -77,6 +86,7 @@
   <script src="js/auth.js?v=1780058146"></script>
   <script src="js/api.js?v=1780058146"></script>
   <script src="js/app.js?v=1780058146"></script>
+  <script src="js/file-ops.js?v=1780058146"></script>
   <!-- 留言面板 -->
         <textarea id="whMsgInput" placeholder="回复留言..." rows="2"></textarea>
       </div>
@@ -94,6 +104,7 @@
 
     async function init() {
       const user = Auth.getUser();
+      _currentRole = user.role;
       document.getElementById('userName').textContent = user.full_name || user.email;
       document.getElementById('userRole').textContent = App.getRoleName(user.role);
       await loadSalespeopleFilter();
@@ -112,6 +123,7 @@
     }
 
     let whDateSortAsc = false;
+    let _currentRole = '';
 
     function toggleDateSort() {
       whDateSortAsc = !whDateSortAsc;
@@ -178,14 +190,14 @@
                   <th>总数量</th><th>业务员</th>
                   <th style="color:#e07a5f;font-weight:600;">📅 预计发货时间</th>
                   
-                  <th>进度回复</th><th>验货时间</th><th>收回时间</th><th style="min-width:70px;">操作</th>
+                  <th>进度回复</th><th>拍照</th><th>是否带来</th><th>验货时间</th><th>收回时间</th><th style="min-width:70px;">操作</th>
                 </tr>
               </thead>
               <tbody>`;
 
         groups[status].forEach(order => {
           const productsHtml = renderWarehouseProductDetail(order.product_model);
-          
+          const fileBtn = FileOps.renderFileBtn(order, _currentRole);
 
           html += `<tr data-id="${order.id}">
             <td><strong>${App.escapeHtml(order.invoice_no)}</strong></td>
@@ -205,7 +217,7 @@
                 value="${App.escapeHtml(order.warehouse_notes || '')}"
                 onblur="updateWarehouseNotes(${order.id}, this.value)" placeholder="进度回复">
             </td>
-            <td>${order.inspection_date || "-"}</td><td>${order.return_date || "-"}</td><td style="display:flex;gap:4px;flex-wrap:wrap;">
+            <td style="text-align:center;">${order.photo_request ? '📸' : '-'}</td><td>${order.bring_goods === true ? '✅是' : order.bring_goods === false ? '❌否' : '-'}</td><td>${order.inspection_date || "-"}</td><td>${order.return_date || "-"}</td><td style="display:flex;gap:4px;flex-wrap:wrap;">
               
               <select class="form-control status-select" onchange="updateStatus(${order.id}, this.value)" style="width:80px;">
                 <option value="">- 待填写 -</option>
