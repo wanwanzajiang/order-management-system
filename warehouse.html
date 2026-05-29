@@ -97,8 +97,12 @@
     }
 
     async function loadSalespeopleFilter() {
-      const { data } = await API.getSalespeople();
+      const { data, error } = await API.getSalespeople();
       const sel = document.getElementById('filterSp');
+      if (error) {
+        sel.innerHTML += '<option value="">⚠️加载失败</option>';
+        return;
+      }
       if (data && data.length > 0) {
         data.forEach(sp => {
           sel.innerHTML += `<option value="${App.escapeHtml(sp.name)}">${App.escapeHtml(sp.name)}</option>`;
