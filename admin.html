@@ -223,6 +223,12 @@
 
     async function init() {
       const user = Auth.getUser();
+      // 等 Supabase session 就绪
+      for (let i = 0; i < 10; i++) {
+        const { data: { session } } = await SUPABASE.auth.getSession();
+        if (session) break;
+        await new Promise(r => setTimeout(r, 300));
+      }
       document.getElementById('userName').textContent = user.full_name || user.email;
       document.getElementById('userRole').textContent = App.getRoleName(user.role);
       if (user.role === CONFIG.ROLES.SUPER) {
