@@ -509,10 +509,8 @@
         return;
       }
 
-      // 获取未读留言数
-      const oids = data.map(o => o.id);
 
-      renderOrders(data, unreadCounts);
+      renderOrders(data);
     }
 
     function renderOrders(orders) {
@@ -828,14 +826,6 @@
     async function updateWarehouseNotes(orderId, notes) {
       const { error } = await API.updateOrder(orderId, { warehouse_notes: notes });
       if (error) showToast('更新备注失败: ' + error.message, 'error');
-    }
-
-     = await API.updateOrder(orderId, { sales_notes: notes });
-      if (error) {
-        showToast('更新备注失败: ' + error.message, 'error');
-      } else {
-        // 不频繁提示
-      }
     }
 
     async function deleteOrder(orderId) {

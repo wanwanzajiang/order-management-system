@@ -231,12 +231,10 @@
         container.innerHTML=`<div class="card" style="margin-top:20px;text-align:center;padding:30px;"><p style="font-size:36px;margin-bottom:8px;">🔍</p><p style="color:#999;">没有找到匹配的订单</p><p style="color:#bbb;font-size:12px;margin-top:4px;">试试更换搜索条件？</p></div>`;
         return;
       }
-      // 批量获取未读留言数
-      const oids=data.map(o=>o.id);
-      renderResults(data,unreadCounts);
+      renderResults(data);
     }
 
-    function renderResults(orders,unreadCounts){
+    function renderResults(orders){
       const container=document.getElementById('resultContainer');
       const totalQty=orders.reduce((sum,o)=>sum+(o.quantity||0),0);
       const statusCount={};orders.forEach(o=>{statusCount[o.order_status]=(statusCount[o.order_status]||0)+1;});
@@ -248,7 +246,6 @@
 
       orders.forEach(order=>{
         const sc={'调货中':'#e67e22','路途中':'#3498db','已到货':'#27ae60','已完结':'#95a5a6'}[order.order_status]||'#999';
-        const uc=(unreadCounts&&unreadCounts[order.id])||0;
         html+=`<div class="order-card">
           <div class="oc-header">
             <div><span class="oc-invoice">${App.escapeHtml(order.invoice_no)}</span></div>
