@@ -3,8 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>订单管理 - 控制台</title>
+  <title>进度回复 - 控制台</title>
   <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/file-panel.css">
   <style>
     .console-nav{display:flex;gap:4px;flex-wrap wrap;padding:12px 16px;background:linear-gradient(135deg,#1a1a2e 0%,#16213e 50%,#0f3460 100%);border-radius:10px;margin-bottom:18px;align-items:center;}
     .c-tab{padding:8px 18px;border:none;background:rgba(255,255,255,0.08);color:#aaa;cursor:pointer;border-radius:6px;font-size:13px;transition:all .2s;}
@@ -127,6 +128,7 @@
   <script src="js/auth.js"></script>
   <script src="js/api.js"></script>
   <script src="js/app.js"></script>
+  <script src="js/file-ops.js"></script>
   <script>
     if (!Auth.isSuper()) { window.location.href = 'login.html'; } else { initC(); }
 
@@ -251,7 +253,7 @@
 </div>
 <form id="editForm" onsubmit="saveEditedOrder(event,${order.id})">
   <div class="form-row-c">
-    <div class="form-group-c"><label>发票号 *</label><input type="text" id="e_invoice_no" value="${App.escapeHtml(order.invoice_no)}" required style="width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:6px;"></div>
+    <div class="form-group-c"><label>到款单号 *</label><input type="text" id="e_invoice_no" value="${App.escapeHtml(order.invoice_no)}" required style="width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:6px;"></div>
     <div class="form-group-c"><label>单据日期</label><input type="date" id="e_order_date" value="${order.order_date||''}" style="width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:6px;"></div>
     <div class="form-group-c"><label>总数量</label><input type="number" id="e_quantity" value="${order.quantity||0}" min="0" style="width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:6px;"></div>
   </div>
@@ -260,12 +262,12 @@
       <option value="">- 待填写 -</option>${CONFIG.ORDER_STATUSES.map(s=>`<option value="${s}" ${s===order.order_status?'selected':''}>${s}</option>`).join('')}
     </select></div>
     <div class="form-group-c"><label>业务员</label><input type="text" id="e_salesperson_name" value="${App.escapeHtml(order.salesperson_name||'')}" style="width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:6px;"></div>
-    <div class="form-group-c"><label>发货时间</label><input type="date" id="e_shipping_date" value="${order.shipping_date||''}" style="width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:6px;"></div>
+    <div class="form-group-c"><label>预计发货时间</label><input type="date" id="e_shipping_date" value="${order.shipping_date||''}" style="width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:6px;"></div>
   </div>
   <div class="form-row-c">
-    <div class="form-group-c"><label>快递单号</label><input type="text" id="e_tracking_no" value="${App.escapeHtml(order.tracking_no||'')}" style="width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:6px;"></div>
-    <div class="form-group-c"><label>仓库备注</label><input type="text" id="e_warehouse_notes" value="${App.escapeHtml(order.warehouse_notes||'')}" style="width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:6px;"></div>
-    <div class="form-group-c"><label>业务备注</label><input type="text" id="e_sales_notes" value="${App.escapeHtml(order.sales_notes||'')}" style="width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:6px;"></div>
+    <div class="form-group-c"><label></label><input type="text" id="e_" value="${App.escapeHtml(order.||'')}" style="width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:6px;"></div>
+    <div class="form-group-c"><label>进度回复</label><input type="text" id="e_warehouse_notes" value="${App.escapeHtml(order.warehouse_notes||'')}" style="width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:6px;"></div>
+    <div class="form-group-c"><label>业务备注</label><input type="text" id="e_" value="${App.escapeHtml(order.||'')}" style="width:100%;padding:7px 10px;border:1px solid #ddd;border-radius:6px;"></div>
   </div>
 
   <div class="prod-edit-area">
@@ -339,12 +341,12 @@
         order_status:document.getElementById('e_order_status').value||null,
         salesperson_name:document.getElementById('e_salesperson_name').value.trim(),
         shipping_date:document.getElementById('e_shipping_date').value||null,
-        tracking_no:document.getElementById('e_tracking_no').value.trim()||null,
+        :document.getElementById('e_').value.trim()||null,
         warehouse_notes:document.getElementById('e_warehouse_notes').value.trim(),
-        sales_notes:document.getElementById('e_sales_notes').value.trim(),
+        :document.getElementById('e_').value.trim(),
         product_model:JSON.stringify(prods)
       };
-      if(!payload.invoice_no||!ok){showToast('发票号和至少一个型号为必填','error');return;}
+      if(!payload.invoice_no||!ok){showToast('到款单号和至少一个型号为必填','error');return;}
       const{error}=await API.updateOrder(oid,payload);
       if(error){showToast('保存失败: '+error.message,'error');log(`订单 ${oid} 保存失败: ${error.message}`,'e');}
       else{showToast('✅ 订单已更新！','success');log(`订单 ${oid}(${payload.invoice_no}) 已完整编辑保存`,'s');refreshOrderSelect();}
@@ -468,6 +470,15 @@
     }
 
     // Toast 复用全局的即可
+
+  <!-- 批量清理文件 -->
+  <div style="margin:12px 0;padding:10px 16px;background:#fef9f7;border:1px dashed #f0d9cb;border-radius:12px;display:inline-flex;align-items:center;gap:8px;font-size:13px;">
+    <span style="color:#e07a5f;">🧹 清理旧文件：</span>
+    <button class="file-del-btn" onclick="FileOps.cleanOldFiles(7)" style="font-size:12px;">删除7天前</button>
+    <button class="file-del-btn" onclick="FileOps.cleanOldFiles(15)" style="font-size:12px;">删除15天前</button>
+    <span style="color:#999;font-size:11px;">仅超级管理员可用</span>
+  </div>
+
   </script>
 </body>
 </html>

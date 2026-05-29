@@ -1,5 +1,6 @@
 -- ============================================
--- 订单管理系统 - 数据库初始化脚本
+-- 进度回复系统 - 数据库初始化脚本
+-- 项目：wanwanzi (nlcudhwgnoljaxmzdiki)
 -- ============================================
 
 -- 1. 创建用户角色表
@@ -7,7 +8,7 @@ CREATE TABLE IF NOT EXISTS user_profiles (
     id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
     email TEXT NOT NULL,
     full_name TEXT,
-    role TEXT NOT NULL CHECK (role IN ('admin', 'warehouse', 'sales')) DEFAULT 'sales',
+    role TEXT NOT NULL CHECK (role IN ('admin', 'warehouse', 'sales', 'super_admin')) DEFAULT 'sales',
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -19,22 +20,26 @@ CREATE TABLE IF NOT EXISTS salespeople (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 3. 创建订单表（增强版）
+-- 3. 创建订单表
 CREATE TABLE IF NOT EXISTS orders (
     id BIGSERIAL PRIMARY KEY,
-    invoice_no TEXT NOT NULL UNIQUE,
-    order_date DATE,              -- 单据日期
-    brand TEXT,                    -- 品牌
-    product_model TEXT NOT NULL,
+    invoice_no TEXT NOT NULL UNIQUE,       -- 到款单号（前端标签）
+    order_date DATE,                        -- 单据日期
+    brand TEXT,                             -- 品牌
+    product_model TEXT NOT NULL,            -- 产品型号
     quantity INTEGER NOT NULL CHECK (quantity >= 0),
-    delivery_date TEXT,            -- 合同货期/交期（自由文本，如"7天内"、"月底前"）
-    order_status TEXT DEFAULT '调货中' CHECK (order_status IN ('调货中', '路途中', '已到货', '已完结')),  -- 允许为空，由仓库填写
-    shipping_date DATE,           -- 仓库发货时间（由仓库填写）
-    tracking_no TEXT,             -- 快递单号（由仓库填写）
-    warehouse_notes TEXT,
-    sales_notes TEXT,
-    salesperson_name TEXT,         -- 业务员姓名（关联salespeople.name）
-    sales_id UUID,                 -- 保留兼容字段（允许为空）
+    delivery_date TEXT,                     -- 合同货期
+    order_status TEXT DEFAULT '调货中' CHECK (order_status IN ('调货中', '路途中', '已到货', '已完结')),
+    shipping_date DATE,                     -- 预计发货时间（前端标签）
+    warehouse_notes TEXT,                   -- 进度回复（前端标签）
+    salesperson_name TEXT,                  -- 业务员姓名
+    sales_id UUID,                          -- 业务员ID（保留兼容）
+    inspection_date DATE,                   -- 验货时间（业务员选填）
+    return_date DATE,                       -- 收回时间（业务员选填）
+    bring_goods BOOLEAN DEFAULT NULL,       -- 是否带来（已到货时业务员选择）
+    photo_request BOOLEAN DEFAULT false,    -- 申请拍照（业务员需求）
+    notified_at TIMESTAMPTZ DEFAULT NULL,   -- 业务员更新需求的时间（仓库通知铃用）
+    file_ids JSONB DEFAULT '[]',           -- 文件元数据数组
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -48,78 +53,59 @@ CREATE INDEX IF NOT EXISTS idx_orders_salesperson_name ON orders(salesperson_nam
 CREATE INDEX IF NOT EXISTS idx_salespeople_name ON salespeople(name);
 
 -- ============================================
--- RLS (Row Level Security) 策略
--- 设计原则：简洁明了，避免自引用导致无限递归
--- 所有已登录用户可读写所有数据（内部管理系统）
+-- RLS 策略 - 所有已登录用户可读写（内部系统）
 -- ============================================
 
--- 启用 RLS
 ALTER TABLE user_profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE orders ENABLE ROW LEVEL SECURITY;
 ALTER TABLE salespeople ENABLE ROW LEVEL SECURITY;
 
--- -------------------------------------------
--- user_profiles 表的 RLS 策略
--- -------------------------------------------
--- 所有登录用户可读取用户信息
+-- user_profiles
 CREATE POLICY "authenticated_can_read_profiles"
     ON user_profiles FOR SELECT
     USING (auth.role() = 'authenticated');
 
--- 用户只能插入自己的 profile
 CREATE POLICY "users_can_insert_own_profile"
     ON user_profiles FOR INSERT
     WITH CHECK (auth.uid() = id);
 
--- 用户只能更新自己的 profile
 CREATE POLICY "users_can_update_own_profile"
     ON user_profiles FOR UPDATE
     USING (auth.uid() = id)
     WITH CHECK (auth.uid() = id);
 
--- -------------------------------------------
--- salespeople 表的 RLS 策略
--- -------------------------------------------
--- 所有登录用户可读取业务员列表
+-- salespeople
 CREATE POLICY "authenticated_can_read_salespeople"
     ON salespeople FOR SELECT
     USING (auth.role() = 'authenticated');
 
--- 所有登录用户可管理业务员（增删改）
 CREATE POLICY "authenticated_can_manage_salespeople"
     ON salespeople FOR ALL
     USING (auth.role() = 'authenticated')
     WITH CHECK (auth.role() = 'authenticated');
 
--- -------------------------------------------
--- orders 表的 RLS 简化策略
--- 所有已登录用户可完整 CRUD 操作
--- -------------------------------------------
-
--- 读取订单
+-- orders
 CREATE POLICY "authenticated_can_read_orders"
     ON orders FOR SELECT
     USING (auth.role() = 'authenticated');
 
--- 新增订单
 CREATE POLICY "authenticated_can_insert_orders"
     ON orders FOR INSERT
     WITH CHECK (auth.role() = 'authenticated');
 
--- 更新订单
 CREATE POLICY "authenticated_can_update_orders"
     ON orders FOR UPDATE
     USING (auth.role() = 'authenticated')
     WITH CHECK (auth.role() = 'authenticated');
 
--- 删除订单
 CREATE POLICY "authenticated_can_delete_orders"
     ON orders FOR DELETE
     USING (auth.role() = 'authenticated');
 
 -- ============================================
--- 触发器：自动更新 updated_at
+-- 触发器
 -- ============================================
+
 CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -128,14 +114,12 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS update_orders_updated_at ON orders;
 CREATE TRIGGER update_orders_updated_at
     BEFORE UPDATE ON orders
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 
--- ============================================
--- 触发器：创建新用户时自动创建 profile
--- ============================================
 CREATE OR REPLACE FUNCTION handle_new_user()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -145,6 +129,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE OR REPLACE TRIGGER on_auth_user_created
     AFTER INSERT ON auth.users
     FOR EACH ROW

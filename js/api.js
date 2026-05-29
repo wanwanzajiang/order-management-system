@@ -100,7 +100,6 @@ const API = {
         // 状态默认为空，由仓库填写
         order_status: orderData.order_status || null,
         salesperson_name: orderData.salesperson_name,
-        sales_notes: orderData.sales_notes || '',
         sales_id: null
       })
       .select()
@@ -159,69 +158,201 @@ const API = {
   },
 
   // ============================================
-  // 订单留言系统
+  // 文件管理（照片/视频 - JSONB元数据存储）
+  // file_ids 格式: [{id, name, size, type, uploaded_at, uploader}]
   // ============================================
 
-  /** 获取某订单的全部留言（按时间正序） */
-  async getMessages(orderId) {
-    const { data, error } = await SUPABASE
-      .from('order_messages')
-      .select('*')
-      .eq('order_id', orderId)
-      .order('created_at', { ascending: true });
-    return { data: data || [], error };
-  },
-
-  /** 发送留言 */
-  async addMessage(msg) {
-    const { data, error } = await SUPABASE
-      .from('order_messages')
-      .insert({
-        order_id: msg.order_id,
-        author_role: msg.author_role,
-        author_name: msg.author_name,
-        content: msg.content,
-        is_read: false
-      })
-      .select()
+  /** 获取订单文件列表（返回带元数据的文件对象） */
+  async getOrderFiles(orderId) {
+    const { data: order, error } = await SUPABASE
+      .from('orders')
+      .select('file_ids')
+      .eq('id', orderId)
       .single();
-    return { data, error };
+    if (error || !order) return { data: [], error };
+
+    const files = order.file_ids || [];
+    if (!Array.isArray(files) || files.length === 0) return { data: [], error: null };
+
+    // 获取文件下载链接
+    const fileIds = files.map(f => (typeof f === 'string' ? f : f.id)).filter(Boolean);
+    const session = sessionStorage.getItem('order_system_session');
+    const token = session ? JSON.parse(session).access_token : '';
+
+    try {
+      const res = await fetch(
+        `https://${CONFIG.TCB_ENV}.service.tcloudbase.com/media-auth`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'list-files', token, orderId })
+        }
+      );
+      const result = await res.json();
+      const dlMap = {};
+      (result.data?.files || []).forEach(f => { dlMap[f.fileId] = f.downloadUrl; });
+
+      // 合并元数据和下载链接
+      return {
+        data: files.map(f => {
+          const meta = typeof f === 'string' ? { id: f, name: f, size: 0, type: 'other', uploaded_at: '', uploader: '' } : f;
+          return { ...meta, downloadUrl: dlMap[meta.id] || '' };
+        }),
+        error: null
+      };
+    } catch (e) {
+      return { data: files.map(f => typeof f === 'string' ? { id: f, name: f } : f), error: null };
+    }
   },
 
-  /** 标记某订单的指定角色留言为已读 */
-  async markMessagesRead(orderId, targetRole) {
-    const { error } = await SUPABASE
-      .from('order_messages')
-      .update({ is_read: true })
-      .eq('order_id', orderId)
-      .eq('author_role', targetRole)
-      .eq('is_read', false);
-    return { error };
+  /** 获取文件下载链接 */
+  async getFileDownloadUrl(fileId, orderId) {
+    const session = sessionStorage.getItem('order_system_session');
+    const token = session ? JSON.parse(session).access_token : '';
+    try {
+      const res = await fetch(
+        `https://${CONFIG.TCB_ENV}.service.tcloudbase.com/media-auth`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'download-url', token, fileId, orderId })
+        }
+      );
+      const result = await res.json();
+      return { url: result.data?.downloadUrl || '', error: result.code !== 0 ? result.message : null };
+    } catch (e) {
+      return { url: '', error: e.message };
+    }
   },
 
-  /** 批量获取多个订单的未读留言数 */
-  async getUnreadCounts(orderIds) {
-    if (!orderIds || orderIds.length === 0) return {};
-    const { data, error } = await SUPABASE
-      .from('order_messages')
-      .select('order_id')
-      .eq('is_read', false)
-      .in('order_id', orderIds);
-    if (error || !data) return {};
-    const counts = {};
-    data.forEach(m => {
-      counts[m.order_id] = (counts[m.order_id] || 0) + 1;
+  /** 添加文件到订单（带元数据） */
+  async attachFileToOrder(orderId, fileMeta) {
+    const { data: order, error: readErr } = await SUPABASE
+      .from('orders')
+      .select('file_ids')
+      .eq('id', orderId)
+      .single();
+    if (readErr) return { error: readErr };
+
+    const files = Array.isArray(order?.file_ids) ? [...order.file_ids] : [];
+    files.push({
+      id: fileMeta.id || fileMeta.cloudPath || '',
+      name: fileMeta.name || 'unknown',
+      size: fileMeta.size || 0,
+      type: fileMeta.type || 'other',
+      uploaded_at: new Date().toISOString(),
+      uploader: fileMeta.uploader || ''
     });
-    return counts;
+
+    const { error } = await SUPABASE
+      .from('orders')
+      .update({ file_ids: files })
+      .eq('id', orderId);
+    return { error };
   },
 
-  /** 删除留言（超管/管理员用） */
-  async deleteMessage(msgId) {
+  /** 替换文件（删除旧文件元数据，添加新文件元数据） */
+  async replaceFile(orderId, oldFileId, newFileMeta) {
+    const { data: order, error: readErr } = await SUPABASE
+      .from('orders')
+      .select('file_ids')
+      .eq('id', orderId)
+      .single();
+    if (readErr) return { error: readErr };
+
+    let files = Array.isArray(order?.file_ids) ? [...order.file_ids] : [];
+    // 移除旧文件
+    files = files.filter(f => (typeof f === 'string' ? f : f.id) !== oldFileId);
+    // 添加新文件
+    files.push({
+      id: newFileMeta.id || newFileMeta.cloudPath || '',
+      name: newFileMeta.name || 'unknown',
+      size: newFileMeta.size || 0,
+      type: newFileMeta.type || 'other',
+      uploaded_at: new Date().toISOString(),
+      uploader: newFileMeta.uploader || ''
+    });
+
     const { error } = await SUPABASE
-      .from('order_messages')
-      .delete()
-      .eq('id', msgId);
+      .from('orders')
+      .update({ file_ids: files })
+      .eq('id', orderId);
+    return { error, oldFiles: [oldFileId] };
+  },
+
+  /** 从订单批量删除N天前的文件 */
+  async cleanOldFiles(days) {
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - days);
+    const cutoffStr = cutoff.toISOString();
+
+    // 获取所有有文件的订单
+    const { data: orders, error } = await SUPABASE
+      .from('orders')
+      .select('id, file_ids')
+      .not('file_ids', 'eq', '[]');
+
+    if (error || !orders) return { error, deleted: 0, orders: [] };
+
+    let totalDeleted = 0;
+    const updatedOrders = [];
+
+    for (const order of orders) {
+      const files = Array.isArray(order.file_ids) ? order.file_ids : [];
+      const oldFiles = files.filter(f => {
+        const t = (typeof f === 'string' ? '' : f.uploaded_at);
+        return t && t < cutoffStr;
+      });
+      const keptFiles = files.filter(f => {
+        const t = (typeof f === 'string' ? '' : f.uploaded_at);
+        return !t || t >= cutoffStr;
+      });
+
+      if (oldFiles.length > 0) {
+        await SUPABASE.from('orders').update({ file_ids: keptFiles }).eq('id', order.id);
+        totalDeleted += oldFiles.length;
+        updatedOrders.push({ orderId: order.id, deletedFileIds: oldFiles.map(f => typeof f === 'string' ? f : f.id) });
+      }
+    }
+
+    return { error: null, deleted: totalDeleted, orders: updatedOrders };
+  },
+
+  /** 从订单移除单个文件 */
+  async removeFileFromOrder(orderId, fileId) {
+    const { data: order, error: readErr } = await SUPABASE
+      .from('orders')
+      .select('file_ids')
+      .eq('id', orderId)
+      .single();
+    if (readErr) return { error: readErr };
+
+    const files = Array.isArray(order?.file_ids)
+      ? order.file_ids.filter(f => (typeof f === 'string' ? f : f.id) !== fileId)
+      : [];
+
+    const { error } = await SUPABASE
+      .from('orders')
+      .update({ file_ids: files })
+      .eq('id', orderId);
     return { error };
+  },
+
+  /** 获取待处理通知数（仓库用） */
+  async getPendingCount() {
+    const lastSeen = localStorage.getItem('wh_last_seen') || new Date(0).toISOString();
+    const { count, error } = await SUPABASE
+      .from('orders')
+      .select('*', { count: 'exact', head: true })
+      .eq('order_status', '已到货')
+      .not('notified_at', 'is', null)
+      .gt('notified_at', lastSeen);
+    return { count: count || 0, error };
+  },
+
+  /** 标记通知已读 */
+  markNotified() {
+    localStorage.setItem('wh_last_seen', new Date().toISOString());
   },
 
   // ============================================
