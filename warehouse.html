@@ -4,8 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>进度回复 - 仓库</title>
-  <link rel="stylesheet" href="css/style.css?v=1780062020">
-  <link rel="stylesheet" href="css/file-panel.css?v=1780062020">
+  <link rel="stylesheet" href="css/style.css?v=1780068441">
+  <link rel="stylesheet" href="css/file-panel.css?v=1780068441">
   <style>
   </style>
 </head>
@@ -68,11 +68,11 @@
   </footer>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="js/config.js?v=1780062020"></script>
-  <script src="js/auth.js?v=1780062020"></script>
-  <script src="js/api.js?v=1780062020"></script>
-  <script src="js/app.js?v=1780062020"></script>
-  <script src="js/file-ops.js?v=1780062020"></script>
+  <script src="js/config.js?v=1780068441"></script>
+  <script src="js/auth.js?v=1780068441"></script>
+  <script src="js/api.js?v=1780068441"></script>
+  <script src="js/app.js?v=1780068441"></script>
+  <script src="js/file-ops.js?v=1780068441"></script>
 
   <script>
     document.getElementById('footerYear').textContent = new Date().getFullYear();
@@ -93,17 +93,23 @@
     }
 
     async function loadSalespeopleFilter() {
+      const sel = document.getElementById('filterSp');
       try {
+        // 方式1：通过 API 封装
         const { data } = await API.getSalespeople();
-        const sel = document.getElementById('filterSp');
         if (data && data.length > 0) {
-          data.forEach(sp => {
-            sel.innerHTML += `<option value="${App.escapeHtml(sp.name)}">${App.escapeHtml(sp.name)}</option>`;
-          });
+          data.forEach(sp => sel.innerHTML += `<option value="${App.escapeHtml(sp.name)}">${App.escapeHtml(sp.name)}</option>`);
+          return;
         }
-      } catch(e) {
-        console.error('加载业务员筛选失败:', e);
-      }
+      } catch(e) { console.warn('API.getSalespeople 失败，尝试直接查询:', e.message); }
+
+      // 方式2：直接查 Supabase（兜底）
+      try {
+        const { data: spList } = await SUPABASE.from('salespeople').select('name').eq('is_active', true).order('name');
+        if (spList && spList.length > 0) {
+          spList.forEach(sp => sel.innerHTML += `<option value="${App.escapeHtml(sp.name)}">${App.escapeHtml(sp.name)}</option>`);
+        }
+      } catch(e2) { console.error('业务员筛选全部加载失败:', e2); }
     }
 
     let whDateSortAsc = false;
