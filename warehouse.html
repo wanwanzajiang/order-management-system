@@ -15,14 +15,10 @@
       background:#fff;border-radius:16px;width:92%;max-width:520px;max-height:80vh;display:flex;flex-direction:column;
       box-shadow:0 20px 60px rgba(0,0,0,0.25);transform:translateY(20px);transition:transform .25s;
     }
-    .msg-from-sales { background:#eef1ff;color:#334;border-top-left-radius:4px;align-self:flex-start; }
-    .msg-self { background:linear-gradient(135deg,#e67e22,#d35400);color:#fff;border-top-right-radius:4px;align-self:flex-end;margin-left:auto; }
-    .msg-meta { font-size:10px;color:#999;margin-top:3px; }
       flex:1;border:1.5px solid #ddd;border-radius:10px;padding:10px 12px;font-size:13px;resize:none;height:48px;font-family:inherit;outline:none;transition:border-color .2s;
     }
       padding:10px 18px;background:linear-gradient(135deg,#e67e22,#d35400);color:#fff;border:none;border-radius:10px;font-size:13px;cursor:pointer;font-weight:500;white-space:nowrap;
     }
-    .msg-unread-dot { width:8px;height:8px;background:#e07a5f;border-radius:50%;display:inline-block;margin-right:4px;animation:pulse 1.5s infinite; }
     @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
     .unread-badge { display:inline-flex;align-items:center;background:#e07a5f;color:#fff;font-size:11px;padding:2px 8px;border-radius:10px;font-weight:500;margin-left:6px;animation:pulse 1.5s infinite; cursor:pointer; }
   </style>
@@ -189,7 +185,6 @@
 
         groups[status].forEach(order => {
           const productsHtml = renderWarehouseProductDetail(order.product_model);
-          const uc = (unreadCounts && unreadCounts[order.id]) || 0;
           
 
           html += `<tr data-id="${order.id}">
@@ -300,8 +295,6 @@
         const isSelf = m.author_role === 'warehouse';
         const timeStr = new Date(m.created_at).toLocaleString('zh-CN', { month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' });
         const roleLabel = isSelf ? '我' : ('👤 ' + (m.author_name || m.author_role));
-        const cls = isSelf ? 'msg-self' : 'msg-from-sales';
-        const unreadDot = (!m.is_read && !isSelf) ? ' <span class="msg-unread-dot"></span>' : '';
       });
       body.innerHTML = html;
     }
