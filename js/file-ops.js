@@ -122,8 +122,12 @@ const FileOps = {
   renderFileBtn(order, userRole) {
     const files = Array.isArray(order.file_ids) ? order.file_ids : [];
     const n = files.length;
-    if (!n && userRole==='sales') return '';
-    return `<button class="file-btn" onclick="FileOps.open(${order.id},'${App.escapeHtml(order.invoice_no)}','${userRole}')">📎${n?` (${n})`:''}</button>`;
+    if (n > 0) {
+      return `<button class="file-btn file-has" style="background:#eaf3de;color:#3b6d11;font-weight:600;" onclick="FileOps.open(${order.id},'${App.escapeHtml(order.invoice_no)}','${userRole}')">📎 ${n}个文件</button>`;
+    }
+    if (userRole === 'sales') return '';  // 业务员没文件不显示
+    // 仓库/管理员：没文件显示灰色提示
+    return `<button class="file-btn" style="color:#bbb;border-color:#eee;cursor:default;" disabled>📁 暂无</button>`;
   }
 };
 window.FileOps = FileOps;

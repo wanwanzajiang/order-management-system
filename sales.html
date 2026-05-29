@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>进度回复 - 业务员</title>
   <link rel="stylesheet" href="css/style.css?v=1780068441">
+  <link rel="stylesheet" href="css/file-panel.css?v=1780068441">
   <style>
     .modal-overlay {
       display:flex;align-items:center;justify-content:center;
@@ -113,6 +114,14 @@
 
   <footer class="footer">© <span id="footerYear"></span> 进度回复系统</footer>
 
+  <!-- 文件面板 -->
+  <div class="file-overlay" id="filePanelOverlay" onclick="if(event.target===this)FileOps.close()">
+    <div class="file-panel">
+      <div class="file-header"><h3 id="filePanelTitle">📎 文件</h3><button onclick="FileOps.close()">&times;</button></div>
+      <div class="file-body" id="filePanelBody"></div>
+    </div>
+  </div>
+
   <!-- 识别码验证 -->
   <div class="modal-overlay" id="codeModal" style="display:none;">
     <div class="modal-box">
@@ -129,6 +138,7 @@
   <script src="js/auth.js?v=1780068441"></script>
   <script src="js/api.js?v=1780068441"></script>
   <script src="js/app.js?v=1780068441"></script>
+  <script src="js/file-ops.js?v=1780068441"></script>
   <script>
     document.getElementById('footerYear').textContent = new Date().getFullYear();
     let currentSp = null;
@@ -230,6 +240,7 @@
             </div>
           </div>
           <div class="oc-actions">
+            ${FileOps.renderFileBtn(order, 'sales')}
             <span style="font-size:11px;color:#ccc;margin-left:auto;">${App.formatDate(order.created_at)}</span>
           </div>
         </div>`;
