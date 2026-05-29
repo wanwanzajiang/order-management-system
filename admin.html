@@ -223,12 +223,6 @@
 
     async function init() {
       const user = Auth.getUser();
-      // 等 Supabase session 就绪
-      for (let i = 0; i < 10; i++) {
-        const { data: { session } } = await SUPABASE.auth.getSession();
-        if (session) break;
-        await new Promise(r => setTimeout(r, 300));
-      }
       document.getElementById('userName').textContent = user.full_name || user.email;
       document.getElementById('userRole').textContent = App.getRoleName(user.role);
       if (user.role === CONFIG.ROLES.SUPER) {
@@ -396,6 +390,13 @@
     }
 
     async function loadDashboard() {
+      try {
+        const stored = Auth.getSession();
+        if (stored?.access_token) {
+          const { data: { session: sb } } = await SUPABASE.auth.getSession();
+          if (!sb) await SUPABASE.auth.setSession({ access_token: stored.access_token, refresh_token: stored.access_token });
+        }
+      } catch(_) {}
       const stats = await API.getOrderStats();
 
       document.querySelector('.stat-total .stat-number').textContent = stats.total;
