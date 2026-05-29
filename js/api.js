@@ -228,36 +228,32 @@ const API = {
   // 统计相关（基于业务员名字 + 订单状态）
   // ============================================
 
-  /** 获取订单统计数据（优化：一次查询替代12+次） */
+  /** 获取订单统计数据（优化：一次查询替代12+次，容错兜底） */
   async getOrderStats() {
-    // 一次查询所有订单，前端统计
-    const { data: orders, error } = await SUPABASE
-      .from('orders')
-      .select('order_status, salesperson_name');
+    const empty = { total: 0, by_status: { '调货中': 0, '路途中': 0, '已到货': 0, '已完结': 0 }, by_sales: [] };
+    try {
+      const { data: orders } = await SUPABASE.from('orders').select('order_status, salesperson_name');
+      if (!orders) return empty;
 
-    const total = orders ? orders.length : 0;
-    const statusCounts = { '调货中': 0, '路途中': 0, '已到货': 0, '已完结': 0 };
-    const salesCounts = {};
-
-    if (orders) {
+      const total = orders.length;
+      const statusCounts = { '调货中': 0, '路途中': 0, '已到货': 0, '已完结': 0 };
+      const salesCounts = {};
       orders.forEach(o => {
         if (o.order_status) statusCounts[o.order_status] = (statusCounts[o.order_status] || 0) + 1;
         if (o.salesperson_name) salesCounts[o.salesperson_name] = (salesCounts[o.salesperson_name] || 0) + 1;
       });
+
+      let salesOrders = [];
+      try {
+        const { data: salesData } = await this.getSalespeople();
+        salesOrders = (salesData || []).map(sp => ({ ...sp, order_count: salesCounts[sp.name] || 0 }));
+      } catch(e) { /* 业务员查询失败不影响主统计 */ }
+
+      return { total, by_status: statusCounts, by_sales: salesOrders };
+    } catch(e) {
+      console.error('getOrderStats 失败:', e);
+      return empty;
     }
-
-    // 业务员列表（只需一次查询）
-    const { data: salesData } = await this.getSalespeople();
-    const salesOrders = (salesData || []).map(sp => ({
-      ...sp,
-      order_count: salesCounts[sp.name] || 0
-    }));
-
-    return {
-      total: total || 0,
-      by_status: statusCounts,
-      by_sales: salesOrders
-    };
   },
 
   // ============================================
