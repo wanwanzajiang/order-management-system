@@ -119,8 +119,6 @@
   <script src="js/api.js?v=1780068441"></script>
   <script src="js/app.js?v=1780068441"></script>
   <script>
-    if (!Auth.isSuper()) { window.location.href = 'login.html'; } else { initC(); }
-
     const TABS = [
       {id:'overview',icon:'📊',label:'系统总览'},
       {id:'accounts',icon:'👤',label:'账号管理'},
@@ -128,6 +126,8 @@
       {id:'spManage',icon:'👥',label:'业务员'},
       {id:'logs',icon:'📋',label:'操作日志'}
     ];
+    if (!Auth.isSuper()) { window.location.href = 'login.html'; } else { initC(); }
+
     let activeTab = 'overview';
     const logs = [];
 
